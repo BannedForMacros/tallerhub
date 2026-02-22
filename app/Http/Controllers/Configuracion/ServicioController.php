@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Configuracion;
 use App\Http\Controllers\Controller;
 use App\Models\Servicio;
 use App\Models\Local;
+use App\Models\Empresa;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -14,34 +15,43 @@ class ServicioController extends Controller
         $user = auth()->user();
 
         $servicios = Servicio::with('local')
-            ->where('empresa_id', $user->empresa_id)
+            ->where('activo', 1)
+            ->when(!$user->esSuperAdmin(), fn($q) => $q->where('empresa_id', $user->empresa_id))
             ->orderBy('nombre')
             ->get();
 
-        $locales = Local::where('empresa_id', $user->empresa_id)
-            ->where('activo', 1)
-            ->orderBy('nombre')
-            ->get();
+        $locales = $user->esSuperAdmin()
+            ? Local::where('activo', 1)->orderBy('nombre')->get()
+            : Local::where('empresa_id', $user->empresa_id)->where('activo', 1)->orderBy('nombre')->get();
+
+        $empresas = $user->esSuperAdmin()
+            ? Empresa::where('activo', 1)->orderBy('nombre')->get()
+            : collect();
 
         return Inertia::render('Configuracion/Servicios/Index', [
             'servicios' => $servicios,
             'locales'   => $locales,
+            'empresas'  => $empresas,
         ]);
     }
 
     public function store(Request $request)
     {
+        $user = auth()->user();
+
         $data = $request->validate([
             'nombre'      => 'required|string|max:255',
             'descripcion' => 'nullable|string',
             'precio'      => 'required|numeric|min:0',
             'local_id'    => 'nullable|exists:locales,id',
+            'empresa_id'  => 'nullable|exists:empresas,id',
         ]);
 
-        $data['empresa_id'] = auth()->user()->empresa_id;
+        $data['empresa_id'] = $user->esSuperAdmin()
+            ? ($data['empresa_id'] ?? null)
+            : $user->empresa_id;
 
         Servicio::create($data);
-
         return back()->with('success', 'Servicio creado correctamente.');
     }
 
@@ -57,7 +67,6 @@ class ServicioController extends Controller
         ]);
 
         $servicio->update($data);
-
         return back()->with('success', 'Servicio actualizado correctamente.');
     }
 
@@ -70,6 +79,8 @@ class ServicioController extends Controller
 
     private function verificarPropiedad(Servicio $servicio): void
     {
-        if ($servicio->empresa_id !== auth()->user()->empresa_id) abort(403);
+        $user = auth()->user();
+        if ($user->esSuperAdmin()) return;
+        if ($servicio->empresa_id !== $user->empresa_id) abort(403);
     }
 }

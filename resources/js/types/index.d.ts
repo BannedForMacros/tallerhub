@@ -183,3 +183,12 @@ export interface OrdenServicio {
     recepcion?: Recepcion;
     tecnico?: Usuario | null;
 }
+
+export interface ClienteFormData {
+    nombre: string;
+    dni: string;
+    telefono: string;
+    email: string;
+    direccion: string;
+    empresa_id: string;
+}

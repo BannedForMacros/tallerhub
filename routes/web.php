@@ -9,6 +9,7 @@ use App\Http\Controllers\Configuracion\TipoGastoController;
 use App\Http\Controllers\Configuracion\ClasificacionGastoController;
 use App\Http\Controllers\Configuracion\DescripcionGastoController;
 use App\Http\Controllers\Configuracion\ServicioController;
+use App\Http\Controllers\ClienteController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -34,6 +35,13 @@ Route::middleware('auth')->group(function () {
     Route::patch ('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
+
+    
+    Route::get   ('/clientes',                  [ClienteController::class, 'index'])->name('clientes.index');
+    Route::post  ('/clientes',                  [ClienteController::class, 'store'])->name('clientes.store');
+    Route::put   ('/clientes/{cliente}',        [ClienteController::class, 'update'])->name('clientes.update');
+    Route::patch ('/clientes/{cliente}/toggle', [ClienteController::class, 'toggleActivo'])->name('clientes.toggle');
+
 
 // ── CONFIGURACIÓN ────────────────────────────────────
 Route::middleware(['auth', 'verified'])->prefix('configuracion')->name('configuracion.')->group(function () {
@@ -81,6 +89,8 @@ Route::middleware(['auth', 'verified'])->prefix('configuracion')->name('configur
     Route::post  ('/gastos/descripcion',                                [DescripcionGastoController::class,   'store'])->name('descripcion-gasto.store');
     Route::put   ('/gastos/descripcion/{descripcionGasto}',             [DescripcionGastoController::class,   'update'])->name('descripcion-gasto.update');
     Route::patch ('/gastos/descripcion/{descripcionGasto}/toggle',      [DescripcionGastoController::class,   'toggleActivo'])->name('descripcion-gasto.toggle');
+    
+
 });
 
 require __DIR__.'/auth.php';
