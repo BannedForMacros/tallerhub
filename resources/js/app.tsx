@@ -1,11 +1,13 @@
 import '../css/app.css';
 import './bootstrap';
 
-import { createInertiaApp } from '@inertiajs/react';
+import { createInertiaApp, router } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
+import { useState } from 'react';
+import Loading from '@/Components/Loading';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || 'Taller Hub';
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
@@ -15,11 +17,22 @@ createInertiaApp({
             import.meta.glob('./Pages/**/*.tsx'),
         ),
     setup({ el, App, props }) {
-        const root = createRoot(el);
+        const Root = () => {
+            const [loading, setLoading] = useState(false);
 
-        root.render(<App {...props} />);
+            // Inertia dispara estos eventos en cada navegación
+            router.on('start',  () => setLoading(true));
+            router.on('finish', () => setLoading(false));
+
+            return (
+                <>
+                    {loading && <Loading />}
+                    <App {...props} />
+                </>
+            );
+        };
+
+        createRoot(el).render(<Root />);
     },
-    progress: {
-        color: '#4B5563',
-    },
+    progress: false,
 });
