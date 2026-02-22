@@ -1,18 +1,17 @@
 <?php
 namespace App\Http\Controllers\Configuracion;
+
 use App\Http\Controllers\Controller;
 use App\Models\Empresa;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class EmpresaController extends Controller
 {
-    // Solo superadmin puede acceder
     private function verificarSuperAdmin()
     {
-        if (!auth()->user()->esSuperAdmin()) {
-            abort(403, 'Sin acceso.');
-        }
+        if (!auth()->user()->esSuperAdmin()) abort(403, 'Sin acceso.');
     }
 
     public function index()
@@ -42,10 +41,14 @@ class EmpresaController extends Controller
             'departamento' => 'required|string|max:100',
             'provincia'    => 'required|string|max:100',
             'distrito'     => 'required|string|max:100',
+            'logo'         => 'nullable|image|mimes:png,jpg,jpeg,webp|max:2048',
         ]);
 
-        Empresa::create($data);
+        if ($request->hasFile('logo')) {
+            $data['logo'] = $request->file('logo')->store('logos', 'public');
+        }
 
+        Empresa::create($data);
         return back()->with('success', 'Empresa creada correctamente.');
     }
 
@@ -62,10 +65,19 @@ class EmpresaController extends Controller
             'departamento' => 'required|string|max:100',
             'provincia'    => 'required|string|max:100',
             'distrito'     => 'required|string|max:100',
+            'logo'         => 'nullable|image|mimes:png,jpg,jpeg,webp|max:2048',
         ]);
 
-        $empresa->update($data);
+        if ($request->hasFile('logo')) {
+            if ($empresa->logo) {
+                Storage::disk('public')->delete($empresa->logo);
+            }
+            $data['logo'] = $request->file('logo')->store('logos', 'public');
+        } else {
+            unset($data['logo']);
+        }
 
+        $empresa->update($data);
         return back()->with('success', 'Empresa actualizada correctamente.');
     }
 

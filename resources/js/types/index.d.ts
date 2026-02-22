@@ -42,6 +42,7 @@ export interface Empresa {
     departamento: string;
     provincia: string;
     distrito: string;
+    logo: string | null;
     activo: boolean;
 }
 
