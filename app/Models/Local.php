@@ -5,6 +5,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Local extends Model
 {
+    protected $table = 'locales';
     protected $fillable = [
         'empresa_id', 'nombre', 'direccion', 'telefono',
         'departamento', 'provincia', 'distrito', 'activo',

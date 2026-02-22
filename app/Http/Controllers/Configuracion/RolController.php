@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Configuracion;
 use App\Http\Controllers\Controller;
+use App\Models\Empresa;
 use App\Models\Rol;
 use App\Models\Modulo;
 use App\Models\PermisoPorRol;
@@ -29,8 +30,13 @@ class RolController extends Controller
             ->orderBy('nombre')
             ->get();
 
+        $empresas = $user->esSuperAdmin()
+            ? Empresa::where('activo', 1)->orderBy('nombre')->get()
+            : collect();
+
         return Inertia::render('Configuracion/Roles/Index', [
-            'roles' => $roles,
+            'roles'    => $roles,
+            'empresas' => $empresas,
         ]);
     }
 
@@ -42,13 +48,15 @@ class RolController extends Controller
         $data = $request->validate([
             'nombre'      => 'required|string|max:100',
             'descripcion' => 'nullable|string|max:255',
+            'empresa_id'  => 'nullable|exists:empresas,id',
         ]);
 
-        // Superadmin puede crear roles globales, dueño solo para su empresa
-        $data['empresa_id'] = $user->esSuperAdmin() ? null : $user->empresa_id;
+        // Superadmin elige empresa, dueño usa la suya
+        $data['empresa_id'] = $user->esSuperAdmin()
+            ? ($data['empresa_id'] ?? null)
+            : $user->empresa_id;
 
         Rol::create($data);
-
         return back()->with('success', 'Rol creado correctamente.');
     }
 
