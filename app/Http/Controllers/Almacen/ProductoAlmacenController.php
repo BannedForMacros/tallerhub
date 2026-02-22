@@ -49,12 +49,11 @@ class ProductoAlmacenController extends Controller
             'codigo'       => 'nullable|string|max:50',
             'nombre'       => 'required|string|max:255',
             'descripcion'  => 'nullable|string',
-            'precio_costo' => 'required|numeric|min:0',
             'precio_venta' => 'nullable|numeric|min:0',
             'unidades'     => 'required|array|min:1',
-            'unidades.*.unidad_medida_id' => 'required|exists:unidades_medida,id',
-            'unidades.*.es_principal'     => 'required|boolean',
-            'unidades.*.factor_conversion'=> 'required|numeric|min:0.0001',
+            'unidades.*.unidad_medida_id'  => 'required|exists:unidades_medida,id',
+            'unidades.*.es_principal'      => 'required|boolean',
+            'unidades.*.factor_conversion' => 'required|numeric|min:0.0001',
         ]);
 
         $data['empresa_id'] = $user->esSuperAdmin()
@@ -63,7 +62,6 @@ class ProductoAlmacenController extends Controller
 
         $producto = ProductoAlmacen::create($data);
 
-        // Guardar unidades de medida
         foreach ($data['unidades'] as $unidad) {
             $producto->productoUnidades()->create([
                 'unidad_medida_id'  => $unidad['unidad_medida_id'],
@@ -82,17 +80,15 @@ class ProductoAlmacenController extends Controller
             'codigo'       => 'nullable|string|max:50',
             'nombre'       => 'required|string|max:255',
             'descripcion'  => 'nullable|string',
-            'precio_costo' => 'required|numeric|min:0',
             'precio_venta' => 'nullable|numeric|min:0',
             'unidades'     => 'required|array|min:1',
-            'unidades.*.unidad_medida_id' => 'required|exists:unidades_medida,id',
-            'unidades.*.es_principal'     => 'required|boolean',
-            'unidades.*.factor_conversion'=> 'required|numeric|min:0.0001',
+            'unidades.*.unidad_medida_id'  => 'required|exists:unidades_medida,id',
+            'unidades.*.es_principal'      => 'required|boolean',
+            'unidades.*.factor_conversion' => 'required|numeric|min:0.0001',
         ]);
 
         $productoAlmacen->update($data);
 
-        // Reemplazar unidades
         $productoAlmacen->productoUnidades()->delete();
         foreach ($data['unidades'] as $unidad) {
             $productoAlmacen->productoUnidades()->create([
@@ -107,8 +103,6 @@ class ProductoAlmacenController extends Controller
 
     public function toggleActivo(ProductoAlmacen $productoAlmacen)
     {
-        $user = auth()->user();
-        if (!$user->esSuperAdmin() && $productoAlmacen->empresa_id !== $user->empresa_id) abort(403);
         $productoAlmacen->update(['activo' => !$productoAlmacen->activo]);
         return back()->with('success', 'Estado actualizado.');
     }

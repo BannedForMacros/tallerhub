@@ -231,3 +231,28 @@ export interface CategoriaAlmacen {
     activo: boolean;
     empresa?: Empresa;
 }
+
+export interface ProductoUnidad {
+    id: number;
+    producto_id: number;
+    unidad_medida_id: number;
+    es_principal: boolean;
+    factor_conversion: number;
+    unidad_medida?: UnidadMedida;
+}
+
+export interface ProductoAlmacen {
+    id: number;
+    empresa_id: number;
+    categoria_id: number | null;
+    codigo: string | null;
+    nombre: string;
+    descripcion: string | null;
+    precio_venta: number | null;
+    activo: boolean;
+    categoria?: CategoriaAlmacen;
+    unidades?: UnidadMedida[];
+    producto_unidades?: ProductoUnidad[];
+    ultimo_costo?: number;
+    tiene_precio_venta?: boolean;
+}

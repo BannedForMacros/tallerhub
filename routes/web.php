@@ -11,6 +11,7 @@ use App\Http\Controllers\Configuracion\DescripcionGastoController;
 use App\Http\Controllers\Configuracion\ServicioController;
 use App\Http\Controllers\Configuracion\UnidadMedidaController;
 use App\Http\Controllers\Configuracion\CategoriaAlmacenController;
+use App\Http\Controllers\Almacen\ProductoAlmacenController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\RecepcionController;
 use Illuminate\Foundation\Application;
@@ -51,6 +52,12 @@ Route::middleware('auth')->group(function () {
     Route::put   ('/recepciones/{recepcion}',        [RecepcionController::class, 'update'])->name('recepciones.update');
     Route::patch ('/recepciones/{recepcion}/toggle', [RecepcionController::class, 'toggleActivo'])->name('recepciones.toggle');
     Route::get   ('/recepciones/{recepcion}/pdf',    [RecepcionController::class, 'pdf'])->name('recepciones.pdf');
+
+    // PRODUCTOS ALMACÉN
+    Route::get   ('/almacen/productos',                        [ProductoAlmacenController::class, 'index'])->name('almacen.productos.index');
+    Route::post  ('/almacen/productos',                        [ProductoAlmacenController::class, 'store'])->name('almacen.productos.store');
+    Route::put   ('/almacen/productos/{productoAlmacen}',      [ProductoAlmacenController::class, 'update'])->name('almacen.productos.update');
+    Route::patch ('/almacen/productos/{productoAlmacen}/toggle',[ProductoAlmacenController::class, 'toggleActivo'])->name('almacen.productos.toggle');
 
 
 // ── CONFIGURACIÓN ────────────────────────────────────
