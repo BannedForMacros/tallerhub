@@ -193,3 +193,27 @@ export interface ClienteFormData {
     direccion: string;
     empresa_id: string;
 }
+
+export interface Recepcion {
+    id: number;
+    codigo: string;
+    empresa_id: number;
+    local_id: number;
+    cliente_id: number;
+    user_id: number | null;
+    tipo_equipo: string;
+    marca: string | null;
+    modelo: string | null;
+    serie: string | null;
+    accesorios: string | null;
+    descripcion_falla: string;
+    observaciones: string | null;
+    estado: 'recibido' | 'en_proceso' | 'listo' | 'entregado';
+    fecha_recepcion: string;
+    fecha_entrega_estimada: string | null;
+    fecha_entrega_real: string | null;
+    activo: boolean;
+    cliente?: Cliente;
+    local?: Local;
+    tecnico?: Usuario | null;
+}

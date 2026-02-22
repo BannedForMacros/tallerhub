@@ -10,6 +10,7 @@ use App\Http\Controllers\Configuracion\ClasificacionGastoController;
 use App\Http\Controllers\Configuracion\DescripcionGastoController;
 use App\Http\Controllers\Configuracion\ServicioController;
 use App\Http\Controllers\ClienteController;
+use App\Http\Controllers\RecepcionController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -36,11 +37,18 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-    
+    // CLIENTES
     Route::get   ('/clientes',                  [ClienteController::class, 'index'])->name('clientes.index');
     Route::post  ('/clientes',                  [ClienteController::class, 'store'])->name('clientes.store');
     Route::put   ('/clientes/{cliente}',        [ClienteController::class, 'update'])->name('clientes.update');
     Route::patch ('/clientes/{cliente}/toggle', [ClienteController::class, 'toggleActivo'])->name('clientes.toggle');
+
+    // RECEPCIONES
+    Route::get   ('/recepciones',                    [RecepcionController::class, 'index'])->name('recepciones.index');
+    Route::post  ('/recepciones',                    [RecepcionController::class, 'store'])->name('recepciones.store');
+    Route::put   ('/recepciones/{recepcion}',        [RecepcionController::class, 'update'])->name('recepciones.update');
+    Route::patch ('/recepciones/{recepcion}/toggle', [RecepcionController::class, 'toggleActivo'])->name('recepciones.toggle');
+    Route::get   ('/recepciones/{recepcion}/pdf',    [RecepcionController::class, 'pdf'])->name('recepciones.pdf');
 
 
 // ── CONFIGURACIÓN ────────────────────────────────────
