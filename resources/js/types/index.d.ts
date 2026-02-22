@@ -217,3 +217,17 @@ export interface Recepcion {
     local?: Local;
     tecnico?: Usuario | null;
 }
+export interface UnidadMedida {
+    id: number;
+    nombre: string;
+    abreviatura: string;
+    activo: boolean;
+}
+
+export interface CategoriaAlmacen {
+    id: number;
+    empresa_id: number;
+    nombre: string;
+    activo: boolean;
+    empresa?: Empresa;
+}

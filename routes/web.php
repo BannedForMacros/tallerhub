@@ -9,6 +9,8 @@ use App\Http\Controllers\Configuracion\TipoGastoController;
 use App\Http\Controllers\Configuracion\ClasificacionGastoController;
 use App\Http\Controllers\Configuracion\DescripcionGastoController;
 use App\Http\Controllers\Configuracion\ServicioController;
+use App\Http\Controllers\Configuracion\UnidadMedidaController;
+use App\Http\Controllers\Configuracion\CategoriaAlmacenController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\RecepcionController;
 use Illuminate\Foundation\Application;
@@ -98,6 +100,15 @@ Route::middleware(['auth', 'verified'])->prefix('configuracion')->name('configur
     Route::put   ('/gastos/descripcion/{descripcionGasto}',             [DescripcionGastoController::class,   'update'])->name('descripcion-gasto.update');
     Route::patch ('/gastos/descripcion/{descripcionGasto}/toggle',      [DescripcionGastoController::class,   'toggleActivo'])->name('descripcion-gasto.toggle');
     
+    Route::get   ('/unidades-medida',                          [UnidadMedidaController::class,    'index'])->name('unidades-medida.index');
+    Route::post  ('/unidades-medida',                          [UnidadMedidaController::class,    'store'])->name('unidades-medida.store');
+    Route::put   ('/unidades-medida/{unidadMedida}',           [UnidadMedidaController::class,    'update'])->name('unidades-medida.update');
+    Route::patch ('/unidades-medida/{unidadMedida}/toggle',    [UnidadMedidaController::class,    'toggleActivo'])->name('unidades-medida.toggle');
+
+    Route::get   ('/categorias-almacen',                       [CategoriaAlmacenController::class,'index'])->name('categorias-almacen.index');
+    Route::post  ('/categorias-almacen',                       [CategoriaAlmacenController::class,'store'])->name('categorias-almacen.store');
+    Route::put   ('/categorias-almacen/{categoriaAlmacen}',    [CategoriaAlmacenController::class,'update'])->name('categorias-almacen.update');
+    Route::patch ('/categorias-almacen/{categoriaAlmacen}/toggle',[CategoriaAlmacenController::class,'toggleActivo'])->name('categorias-almacen.toggle');
 
 });
 
