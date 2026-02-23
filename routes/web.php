@@ -21,6 +21,7 @@ use App\Http\Controllers\Almacen\InventarioController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\VentaController;
 use App\Http\Controllers\RecepcionController;
+use App\Http\Controllers\GastoController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -114,6 +115,14 @@ Route::middleware('auth')->group(function () {
     Route::post  ('/configuracion/cuentas-pago',                   [CuentaPagoController::class, 'store'])->name('config.cuentas-pago.store');
     Route::put   ('/configuracion/cuentas-pago/{cuentaPago}',      [CuentaPagoController::class, 'update'])->name('config.cuentas-pago.update');
     Route::patch ('/configuracion/cuentas-pago/{cuentaPago}/toggle',[CuentaPagoController::class, 'toggleActivo'])->name('config.cuentas-pago.toggle');
+
+    // GASTOS
+    Route::get   ('/gastos',               [GastoController::class, 'index'])->name('gastos.index');
+    Route::get   ('/gastos/create',        [GastoController::class, 'create'])->name('gastos.create');
+    Route::post  ('/gastos',               [GastoController::class, 'store'])->name('gastos.store');
+    Route::get   ('/gastos/{gasto}/edit',  [GastoController::class, 'edit'])->name('gastos.edit');
+    Route::put   ('/gastos/{gasto}',       [GastoController::class, 'update'])->name('gastos.update');
+    Route::patch ('/gastos/{gasto}/toggle',[GastoController::class, 'toggleActivo'])->name('gastos.toggle');
 
     // ── CONFIGURACIÓN ────────────────────────────────────
 Route::middleware(['auth', 'verified'])->prefix('configuracion')->name('configuracion.')->group(function () {
