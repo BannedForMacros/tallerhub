@@ -391,3 +391,28 @@ export interface Servicio {
     precio: number;
     activo: boolean;
 }
+
+export interface CuentaPago {
+    id: number;
+    empresa_id: number;
+    metodo_pago_id: number;
+    nombre: string;
+    numero_cuenta: string | null;
+    titular: string | null;
+    moneda: 'PEN' | 'USD';
+    saldo_inicial: number;
+    activo: boolean;
+    metodo_pago?: MetodoPago;
+    empresa?: Empresa;
+}
+
+export interface MetodoPago {
+    id: number;
+    empresa_id: number;
+    nombre: string;
+    icono: string | null;
+    activo: boolean;
+    cuentas?: CuentaPago[];
+    cuentas_activas?: CuentaPago[];
+    empresa?: Empresa;
+}

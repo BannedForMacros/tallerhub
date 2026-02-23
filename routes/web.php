@@ -11,6 +11,8 @@ use App\Http\Controllers\Configuracion\DescripcionGastoController;
 use App\Http\Controllers\Configuracion\ServicioController;
 use App\Http\Controllers\Configuracion\UnidadMedidaController;
 use App\Http\Controllers\Configuracion\CategoriaAlmacenController;
+use App\Http\Controllers\Configuracion\MetodoPagoController;
+use App\Http\Controllers\Configuracion\CuentaPagoController;
 use App\Http\Controllers\Almacen\ProductoAlmacenController;
 use App\Http\Controllers\Almacen\ProveedorController;
 use App\Http\Controllers\Almacen\EntradaAlmacenController;
@@ -99,6 +101,19 @@ Route::middleware('auth')->group(function () {
     Route::get   ('/ventas/{venta}/edit',  [VentaController::class, 'edit'])->name('ventas.edit');
     Route::patch ('/ventas/{venta}/toggle',[VentaController::class, 'toggleActivo'])->name('ventas.toggle');
     Route::put('/ventas/{venta}', [VentaController::class, 'update'])->name('ventas.update');
+
+    // Métodos de pago
+    Route::get   ('/configuracion/metodos-pago',                    [MetodoPagoController::class, 'index'])->name('config.metodos-pago.index');
+    Route::post  ('/configuracion/metodos-pago',                    [MetodoPagoController::class, 'store'])->name('config.metodos-pago.store');
+    Route::put   ('/configuracion/metodos-pago/{metodoPago}',       [MetodoPagoController::class, 'update'])->name('config.metodos-pago.update');
+    Route::patch ('/configuracion/metodos-pago/{metodoPago}/toggle',[MetodoPagoController::class, 'toggleActivo'])->name('config.metodos-pago.toggle');
+    Route::get   ('/configuracion/metodos-pago/lista',              [MetodoPagoController::class, 'lista'])->name('config.metodos-pago.lista');
+
+    // Cuentas de pago
+    Route::get   ('/configuracion/cuentas-pago',                   [CuentaPagoController::class, 'index'])->name('config.cuentas-pago.index');
+    Route::post  ('/configuracion/cuentas-pago',                   [CuentaPagoController::class, 'store'])->name('config.cuentas-pago.store');
+    Route::put   ('/configuracion/cuentas-pago/{cuentaPago}',      [CuentaPagoController::class, 'update'])->name('config.cuentas-pago.update');
+    Route::patch ('/configuracion/cuentas-pago/{cuentaPago}/toggle',[CuentaPagoController::class, 'toggleActivo'])->name('config.cuentas-pago.toggle');
 
     // ── CONFIGURACIÓN ────────────────────────────────────
 Route::middleware(['auth', 'verified'])->prefix('configuracion')->name('configuracion.')->group(function () {
