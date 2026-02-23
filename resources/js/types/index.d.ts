@@ -329,3 +329,65 @@ export interface SalidaAlmacen {
     usuario?: Usuario;
     detalles?: SalidaAlmacenDetalle[];
 }
+
+export interface Inventario {
+    id: number;
+    empresa_id: number;
+    local_id: number;
+    producto_id: number;
+    unidad_medida_id: number;
+    stock: number;
+    stock_minimo: number;
+    precio_promedio?: number;
+    producto?: ProductoAlmacen;
+    unidad_medida?: UnidadMedida;
+    local?: Local;
+}
+export interface VentaDetalle {
+    id: number;
+    venta_id: number;
+    tipo: 'servicio' | 'producto';
+    servicio_id: number | null;
+    producto_id: number | null;
+    unidad_medida_id: number | null;
+    descripcion: string;
+    cantidad: number;
+    precio_costo_ref: number;
+    precio_unitario: number;
+    subtotal: number;
+    servicio?: Servicio;
+    producto?: ProductoAlmacen;
+    unidad_medida?: UnidadMedida;
+}
+
+export interface Venta {
+    id: number;
+    codigo: string;
+    empresa_id: number;
+    local_id: number;
+    cliente_id: number | null;
+    recepcion_id: number | null;
+    user_id: number;
+    observaciones: string | null;
+    subtotal: number;
+    descuento: number;
+    total: number;
+    estado: 'pendiente' | 'pagado' | 'anulado';
+    fecha: string;
+    activo: boolean;
+    cliente?: Cliente;
+    local?: Local;
+    usuario?: Usuario;
+    recepcion?: Recepcion;
+    detalles?: VentaDetalle[];
+}
+
+export interface Servicio {
+    id: number;
+    empresa_id: number;
+    local_id: number | null;
+    nombre: string;
+    descripcion: string | null;
+    precio: number;
+    activo: boolean;
+}

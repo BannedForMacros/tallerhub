@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Almacen;
 use App\Http\Controllers\Controller;
 use App\Models\SalidaAlmacen;
 use App\Models\SalidaAlmacenDetalle;
+use App\Models\EntradaAlmacenDetalle;
 use App\Models\Inventario;
 use App\Models\ProductoAlmacen;
 use App\Models\Local;
@@ -25,7 +26,15 @@ class SalidaAlmacenController extends Controller
         ];
     }
 
-    private function getDatosFormulario(int|null $empresaId, bool $esSuperAdmin): array
+    private function getPrecioPromedio(int $productoId, int $unidadMedidaId, int $localId): float
+    {
+        return (float) EntradaAlmacenDetalle::where('producto_id',      $productoId)
+            ->where('unidad_medida_id', $unidadMedidaId)
+            ->whereHas('entrada', fn($q) => $q->where('local_id', $localId)->where('activo', 1))
+            ->avg('precio_unitario') ?? 0;
+    }
+
+    private function getDatosFormulario(?int $empresaId, bool $esSuperAdmin): array
     {
         $empresas = $esSuperAdmin
             ? Empresa::where('activo', 1)->orderBy('nombre')->get()
@@ -35,18 +44,23 @@ class SalidaAlmacenController extends Controller
             ->when($empresaId, fn($q) => $q->where('empresa_id', $empresaId))
             ->orderBy('nombre')->get();
 
-        // Productos con su stock disponible por local
         $productos = ProductoAlmacen::with('productoUnidades.unidadMedida')
             ->where('activo', 1)
             ->when($empresaId, fn($q) => $q->where('empresa_id', $empresaId))
             ->orderBy('nombre')->get();
 
-        // Stock disponible: inventario agrupado por producto+unidad+local
-        $inventario = Inventario::where('stock', '>', 0)
+        $inventario = Inventario::with(['producto', 'unidadMedida'])
             ->when($empresaId, fn($q) => $q->where('empresa_id', $empresaId))
             ->get()
-            ->groupBy(fn($i) => $i->local_id . '_' . $i->producto_id . '_' . $i->unidad_medida_id)
-            ->map(fn($grupo) => $grupo->first());
+            ->map(function ($inv) {
+                $inv->precio_promedio = $this->getPrecioPromedio(
+                    $inv->producto_id,
+                    $inv->unidad_medida_id,
+                    $inv->local_id
+                );
+                return $inv;
+            })
+            ->values();
 
         return compact('empresas', 'locales', 'productos', 'inventario');
     }
@@ -86,18 +100,15 @@ class SalidaAlmacenController extends Controller
         $motivosValidos = implode(',', array_keys(self::motivosDisponibles()));
 
         $data = $request->validate([
-            'empresa_id'                  => 'nullable|exists:empresas,id',
-            'local_id'                    => 'required|exists:locales,id',
-            'tipo'                        => "required|string|in:{$motivosValidos}",
-            'observaciones'               => 'nullable|string',
-            'fecha'                       => 'required|date',
-            'detalles'                    => 'required|array|min:1',
-            'detalles.*.producto_id'      => 'required|exists:productos_almacen,id',
-            'detalles.*.unidad_medida_id' => 'required|exists:unidades_medida,id',
-            'detalles.*.cantidad'         => 'required|numeric|min:0.0001',
-            'detalles.*.precio_unitario'  => 'required|numeric|min:0',
-            'detalles.*.tipo_precio'      => 'required|in:costo,venta',
-            'detalles.*.subtotal'         => 'required|numeric|min:0',
+            'empresa_id'                      => 'nullable|exists:empresas,id',
+            'local_id'                        => 'required|exists:locales,id',
+            'tipo'                            => "required|string|in:{$motivosValidos}",
+            'observaciones'                   => 'nullable|string',
+            'fecha'                           => 'required|date',
+            'detalles'                        => 'required|array|min:1',
+            'detalles.*.producto_id'          => 'required|exists:productos_almacen,id',
+            'detalles.*.unidad_medida_id'     => 'required|exists:unidades_medida,id',
+            'detalles.*.cantidad'             => 'required|numeric|min:0.0001',
         ]);
 
         $empresaId = $user->esSuperAdmin()
@@ -113,16 +124,15 @@ class SalidaAlmacenController extends Controller
                     ->where('unidad_medida_id', $detalle['unidad_medida_id'])
                     ->first();
 
-                $stockDisponible = $inv ? $inv->stock : 0;
+                $stockDisponible = $inv ? (float) $inv->stock : 0;
 
-                if ($detalle['cantidad'] > $stockDisponible) {
+                if ((float) $detalle['cantidad'] > $stockDisponible) {
                     $producto = ProductoAlmacen::find($detalle['producto_id']);
                     throw new \Exception("Stock insuficiente para '{$producto->nombre}'. Disponible: {$stockDisponible}");
                 }
             }
 
-            $total = collect($data['detalles'])->sum(fn($d) => $d['subtotal']);
-
+            // Crear cabecera con total 0 primero
             $salida = SalidaAlmacen::create([
                 'codigo'        => Correlativo::siguiente($empresaId, 'SAL'),
                 'empresa_id'    => $empresaId,
@@ -131,19 +141,31 @@ class SalidaAlmacenController extends Controller
                 'tipo'          => $data['tipo'],
                 'motivo'        => self::motivosDisponibles()[$data['tipo']] ?? $data['tipo'],
                 'observaciones' => $data['observaciones'] ?? null,
-                'total'         => $total,
+                'total'         => 0,
                 'fecha'         => $data['fecha'],
             ]);
 
+            $totalSalida = 0;
+
             foreach ($data['detalles'] as $detalle) {
+                // Calcular precio promedio de entradas
+                $precioPromedio = $this->getPrecioPromedio(
+                    $detalle['producto_id'],
+                    $detalle['unidad_medida_id'],
+                    $data['local_id']
+                );
+
+                $subtotal = (float) $detalle['cantidad'] * $precioPromedio;
+                $totalSalida += $subtotal;
+
                 SalidaAlmacenDetalle::create([
                     'salida_id'        => $salida->id,
                     'producto_id'      => $detalle['producto_id'],
                     'unidad_medida_id' => $detalle['unidad_medida_id'],
                     'cantidad'         => $detalle['cantidad'],
-                    'precio_unitario'  => $detalle['precio_unitario'],
-                    'tipo_precio'      => $detalle['tipo_precio'],
-                    'subtotal'         => $detalle['subtotal'],
+                    'precio_unitario'  => $precioPromedio,
+                    'tipo_precio'      => 'costo',
+                    'subtotal'         => $subtotal,
                 ]);
 
                 // Descontar stock
@@ -153,6 +175,9 @@ class SalidaAlmacenController extends Controller
                     ->where('unidad_medida_id', $detalle['unidad_medida_id'])
                     ->decrement('stock', $detalle['cantidad']);
             }
+
+            // Actualizar total real
+            $salida->update(['total' => $totalSalida]);
         });
 
         return redirect()->route('almacen.salidas.index')
@@ -193,9 +218,6 @@ class SalidaAlmacenController extends Controller
             'detalles.*.producto_id'      => 'required|exists:productos_almacen,id',
             'detalles.*.unidad_medida_id' => 'required|exists:unidades_medida,id',
             'detalles.*.cantidad'         => 'required|numeric|min:0.0001',
-            'detalles.*.precio_unitario'  => 'required|numeric|min:0',
-            'detalles.*.tipo_precio'      => 'required|in:costo,venta',
-            'detalles.*.subtotal'         => 'required|numeric|min:0',
         ]);
 
         DB::transaction(function () use ($data, $salidaAlmacen) {
@@ -210,7 +232,7 @@ class SalidaAlmacenController extends Controller
                     ->increment('stock', $detalleAnterior->cantidad);
             }
 
-            // Verificar nuevo stock
+            // Verificar nuevo stock disponible
             foreach ($data['detalles'] as $detalle) {
                 $inv = Inventario::where('empresa_id',      $empresaId)
                     ->where('local_id',        $data['local_id'])
@@ -218,36 +240,45 @@ class SalidaAlmacenController extends Controller
                     ->where('unidad_medida_id', $detalle['unidad_medida_id'])
                     ->first();
 
-                $stockDisponible = $inv ? $inv->stock : 0;
+                $stockDisponible = $inv ? (float) $inv->stock : 0;
 
-                if ($detalle['cantidad'] > $stockDisponible) {
+                if ((float) $detalle['cantidad'] > $stockDisponible) {
                     $producto = ProductoAlmacen::find($detalle['producto_id']);
                     throw new \Exception("Stock insuficiente para '{$producto->nombre}'. Disponible: {$stockDisponible}");
                 }
             }
 
+            // Eliminar detalles anteriores
             $salidaAlmacen->detalles()->delete();
 
-            $total = collect($data['detalles'])->sum(fn($d) => $d['subtotal']);
+            $totalSalida = 0;
 
             $salidaAlmacen->update([
                 'local_id'      => $data['local_id'],
                 'tipo'          => $data['tipo'],
                 'motivo'        => self::motivosDisponibles()[$data['tipo']] ?? $data['tipo'],
                 'observaciones' => $data['observaciones'] ?? null,
-                'total'         => $total,
                 'fecha'         => $data['fecha'],
             ]);
 
             foreach ($data['detalles'] as $detalle) {
+                $precioPromedio = $this->getPrecioPromedio(
+                    $detalle['producto_id'],
+                    $detalle['unidad_medida_id'],
+                    $data['local_id']
+                );
+
+                $subtotal = (float) $detalle['cantidad'] * $precioPromedio;
+                $totalSalida += $subtotal;
+
                 SalidaAlmacenDetalle::create([
                     'salida_id'        => $salidaAlmacen->id,
                     'producto_id'      => $detalle['producto_id'],
                     'unidad_medida_id' => $detalle['unidad_medida_id'],
                     'cantidad'         => $detalle['cantidad'],
-                    'precio_unitario'  => $detalle['precio_unitario'],
-                    'tipo_precio'      => $detalle['tipo_precio'],
-                    'subtotal'         => $detalle['subtotal'],
+                    'precio_unitario'  => $precioPromedio,
+                    'tipo_precio'      => 'costo',
+                    'subtotal'         => $subtotal,
                 ]);
 
                 Inventario::where('empresa_id',      $empresaId)
@@ -256,6 +287,8 @@ class SalidaAlmacenController extends Controller
                     ->where('unidad_medida_id', $detalle['unidad_medida_id'])
                     ->decrement('stock', $detalle['cantidad']);
             }
+
+            $salidaAlmacen->update(['total' => $totalSalida]);
         });
 
         return redirect()->route('almacen.salidas.index')

@@ -14,7 +14,10 @@ use App\Http\Controllers\Configuracion\CategoriaAlmacenController;
 use App\Http\Controllers\Almacen\ProductoAlmacenController;
 use App\Http\Controllers\Almacen\ProveedorController;
 use App\Http\Controllers\Almacen\EntradaAlmacenController;
+use App\Http\Controllers\Almacen\SalidaAlmacenController;
+use App\Http\Controllers\Almacen\InventarioController;
 use App\Http\Controllers\ClienteController;
+use App\Http\Controllers\VentaController;
 use App\Http\Controllers\RecepcionController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -76,7 +79,28 @@ Route::middleware('auth')->group(function () {
     Route::get   ('/almacen/entradas/{entradaAlmacen}/edit',  [EntradaAlmacenController::class, 'edit'])->name('almacen.entradas.edit');
     Route::put   ('/almacen/entradas/{entradaAlmacen}',       [EntradaAlmacenController::class, 'update'])->name('almacen.entradas.update');
     Route::patch ('/almacen/entradas/{entradaAlmacen}/toggle',[EntradaAlmacenController::class, 'toggleActivo'])->name('almacen.entradas.toggle');
-// ── CONFIGURACIÓN ────────────────────────────────────
+
+    // Salidas
+    Route::get   ('/almacen/salidas',                       [SalidaAlmacenController::class, 'index'])->name('almacen.salidas.index');
+    Route::get   ('/almacen/salidas/create',                [SalidaAlmacenController::class, 'create'])->name('almacen.salidas.create');
+    Route::post  ('/almacen/salidas',                       [SalidaAlmacenController::class, 'store'])->name('almacen.salidas.store');
+    Route::get   ('/almacen/salidas/{salidaAlmacen}/edit',  [SalidaAlmacenController::class, 'edit'])->name('almacen.salidas.edit');
+    Route::put   ('/almacen/salidas/{salidaAlmacen}',       [SalidaAlmacenController::class, 'update'])->name('almacen.salidas.update');
+    Route::patch ('/almacen/salidas/{salidaAlmacen}/toggle',[SalidaAlmacenController::class, 'toggleActivo'])->name('almacen.salidas.toggle');
+
+    // Inventario
+    Route::get('/almacen/inventario', [InventarioController::class, 'index'])->name('almacen.inventario.index');
+
+    // VENTAS
+    Route::get   ('/ventas',               [VentaController::class, 'index'])->name('ventas.index');
+    Route::get   ('/ventas/create',        [VentaController::class, 'create'])->name('ventas.create');
+    Route::post  ('/ventas',               [VentaController::class, 'store'])->name('ventas.store');
+    Route::get   ('/ventas/{venta}',       [VentaController::class, 'show'])->name('ventas.show');
+    Route::get   ('/ventas/{venta}/edit',  [VentaController::class, 'edit'])->name('ventas.edit');
+    Route::patch ('/ventas/{venta}/toggle',[VentaController::class, 'toggleActivo'])->name('ventas.toggle');
+    Route::put('/ventas/{venta}', [VentaController::class, 'update'])->name('ventas.update');
+
+    // ── CONFIGURACIÓN ────────────────────────────────────
 Route::middleware(['auth', 'verified'])->prefix('configuracion')->name('configuracion.')->group(function () {
 
     // Empresas
