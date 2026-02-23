@@ -7,7 +7,7 @@ interface Props {
     onClose: () => void;
     title: string;
     children: ReactNode;
-    maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+    maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'| '4xl';
 }
 
 const maxWidthMap = {
@@ -16,6 +16,7 @@ const maxWidthMap = {
     lg:  'sm:max-w-lg',
     xl:  'sm:max-w-xl',
     '2xl': 'sm:max-w-2xl',
+    '4xl': 'max-w-4xl',
 };
 
 export default function Modal({ show, onClose, title, children, maxWidth = 'lg' }: Props) {

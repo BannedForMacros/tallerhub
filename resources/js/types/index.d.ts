@@ -256,3 +256,76 @@ export interface ProductoAlmacen {
     ultimo_costo?: number;
     tiene_precio_venta?: boolean;
 }
+
+export interface Proveedor {
+    id: number;
+    empresa_id: number;
+    nombre: string;
+    ruc: string | null;
+    telefono: string | null;
+    email: string | null;
+    direccion: string | null;
+    contacto: string | null;
+    activo: boolean;
+    empresa?: Empresa;
+}
+
+export interface EntradaAlmacenDetalle {
+    id: number;
+    entrada_id: number;
+    producto_id: number;
+    unidad_medida_id: number;
+    proveedor_id: number | null;
+    cantidad: number;
+    precio_unitario: number;
+    subtotal: number;
+    producto?: ProductoAlmacen;
+    unidad_medida?: UnidadMedida;
+    proveedor?: Proveedor;
+}
+
+export interface EntradaAlmacen {
+    id: number;
+    codigo: string;
+    empresa_id: number;
+    local_id: number;
+    user_id: number;
+    motivo: string | null;
+    observaciones: string | null;
+    total: number;
+    fecha: string;
+    activo: boolean;
+    local?: Local;
+    usuario?: Usuario;
+    detalles?: EntradaAlmacenDetalle[];
+}
+
+export interface SalidaAlmacenDetalle {
+    id: number;
+    salida_id: number;
+    producto_id: number;
+    unidad_medida_id: number;
+    cantidad: number;
+    precio_unitario: number;
+    tipo_precio: 'costo' | 'venta';
+    subtotal: number;
+    producto?: ProductoAlmacen;
+    unidad_medida?: UnidadMedida;
+}
+
+export interface SalidaAlmacen {
+    id: number;
+    codigo: string;
+    empresa_id: number;
+    local_id: number;
+    user_id: number;
+    tipo: string;
+    motivo: string | null;
+    observaciones: string | null;
+    total: number;
+    fecha: string;
+    activo: boolean;
+    local?: Local;
+    usuario?: Usuario;
+    detalles?: SalidaAlmacenDetalle[];
+}

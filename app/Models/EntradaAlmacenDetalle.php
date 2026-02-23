@@ -9,7 +9,7 @@ class EntradaAlmacenDetalle extends Model
 
     protected $fillable = [
         'entrada_id', 'producto_id', 'unidad_medida_id',
-        'cantidad', 'precio_unitario', 'subtotal',
+        'proveedor_id', 'cantidad', 'precio_unitario', 'subtotal',
     ];
 
     protected $casts = [
@@ -21,4 +21,5 @@ class EntradaAlmacenDetalle extends Model
     public function entrada()      { return $this->belongsTo(EntradaAlmacen::class); }
     public function producto()     { return $this->belongsTo(ProductoAlmacen::class, 'producto_id'); }
     public function unidadMedida() { return $this->belongsTo(UnidadMedida::class); }
+    public function proveedor()    { return $this->belongsTo(Proveedor::class); }
 }

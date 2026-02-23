@@ -12,6 +12,8 @@ use App\Http\Controllers\Configuracion\ServicioController;
 use App\Http\Controllers\Configuracion\UnidadMedidaController;
 use App\Http\Controllers\Configuracion\CategoriaAlmacenController;
 use App\Http\Controllers\Almacen\ProductoAlmacenController;
+use App\Http\Controllers\Almacen\ProveedorController;
+use App\Http\Controllers\Almacen\EntradaAlmacenController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\RecepcionController;
 use Illuminate\Foundation\Application;
@@ -59,7 +61,21 @@ Route::middleware('auth')->group(function () {
     Route::put   ('/almacen/productos/{productoAlmacen}',      [ProductoAlmacenController::class, 'update'])->name('almacen.productos.update');
     Route::patch ('/almacen/productos/{productoAlmacen}/toggle',[ProductoAlmacenController::class, 'toggleActivo'])->name('almacen.productos.toggle');
 
+    //PROVEEDORES
+    Route::get   ('/almacen/proveedores',                      [ProveedorController::class, 'index'])->name('almacen.proveedores.index');
+    Route::post  ('/almacen/proveedores',                      [ProveedorController::class, 'store'])->name('almacen.proveedores.store');
+    Route::put   ('/almacen/proveedores/{proveedor}',          [ProveedorController::class, 'update'])->name('almacen.proveedores.update');
+    Route::patch ('/almacen/proveedores/{proveedor}/toggle',   [ProveedorController::class, 'toggleActivo'])->name('almacen.proveedores.toggle');
+    Route::get   ('/almacen/proveedores/lista',                [ProveedorController::class, 'lista'])->name('almacen.proveedores.lista');
 
+    // ENTRADAS ALMACÉN
+    Route::get   ('/almacen/entradas',                        [EntradaAlmacenController::class, 'index'])->name('almacen.entradas.index');
+    Route::get   ('/almacen/entradas/create',                 [EntradaAlmacenController::class, 'create'])->name('almacen.entradas.create');
+    Route::post  ('/almacen/entradas',                        [EntradaAlmacenController::class, 'store'])->name('almacen.entradas.store');
+    Route::get   ('/almacen/entradas/{entradaAlmacen}',       [EntradaAlmacenController::class, 'show'])->name('almacen.entradas.show');
+    Route::get   ('/almacen/entradas/{entradaAlmacen}/edit',  [EntradaAlmacenController::class, 'edit'])->name('almacen.entradas.edit');
+    Route::put   ('/almacen/entradas/{entradaAlmacen}',       [EntradaAlmacenController::class, 'update'])->name('almacen.entradas.update');
+    Route::patch ('/almacen/entradas/{entradaAlmacen}/toggle',[EntradaAlmacenController::class, 'toggleActivo'])->name('almacen.entradas.toggle');
 // ── CONFIGURACIÓN ────────────────────────────────────
 Route::middleware(['auth', 'verified'])->prefix('configuracion')->name('configuracion.')->group(function () {
 
