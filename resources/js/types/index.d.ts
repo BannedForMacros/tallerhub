@@ -7,6 +7,7 @@ export interface User {
     empresa_id?: number;
     local_id?: number;
     esSuperAdmin: boolean;
+    email_verified_at: string | null;
 }
 
 export interface Modulo {
