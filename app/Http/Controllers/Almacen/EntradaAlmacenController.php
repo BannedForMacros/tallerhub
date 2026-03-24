@@ -97,6 +97,7 @@ class EntradaAlmacenController extends Controller
                 'observaciones' => $data['observaciones'] ?? null,
                 'total'         => $total,
                 'fecha'         => $data['fecha'],
+                'activo'        => true,
             ]);
 
             foreach ($data['detalles'] as $detalle) {
