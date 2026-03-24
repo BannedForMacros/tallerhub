@@ -37,7 +37,10 @@ class UsuarioController extends Controller
 
         $roles = Rol::where('activo', 1)
             ->when(!$user->esSuperAdmin(), fn($q) =>
-                $q->where('empresa_id', $user->empresa_id)
+                $q->where(fn($sub) =>
+                    $sub->where('empresa_id', $user->empresa_id)
+                        ->orWhereNull('empresa_id')
+                )
             )
             ->get();
 
@@ -83,14 +86,22 @@ class UsuarioController extends Controller
     {
         $this->verificarAcceso();
         $this->verificarPropiedadUsuario($usuario);
+        $user = auth()->user();
 
         $data = $request->validate([
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|email|unique:users,email,'.$usuario->id,
-            'telefono' => 'nullable|string|max:20',
-            'rol_id'   => 'required|exists:roles,id',
-            'local_id' => 'nullable|exists:locales,id',
+            'name'       => 'required|string|max:255',
+            'email'      => 'required|email|unique:users,email,'.$usuario->id,
+            'telefono'   => 'nullable|string|max:20',
+            'rol_id'     => 'required|exists:roles,id',
+            'local_id'   => 'nullable|exists:locales,id',
+            'empresa_id' => 'nullable|exists:empresas,id',
         ]);
+
+        if (!$user->esSuperAdmin()) {
+            unset($data['empresa_id']);
+        } else {
+            $data['empresa_id'] = $data['empresa_id'] ?: null;
+        }
 
         if ($request->filled('password')) {
             $request->validate(['password' => 'string|min:8']);

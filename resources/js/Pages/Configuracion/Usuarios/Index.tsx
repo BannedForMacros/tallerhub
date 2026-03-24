@@ -18,9 +18,9 @@ interface Usuario {
     name: string;
     email: string;
     telefono: string;
-    empresa_id: number;
+    empresa_id: number | null;
     local_id: number | null;
-    rol_id: number;
+    rol_id: number | null;
     activo: boolean;
     rol: { id: number; nombre: string } | null;
     local: { id: number; nombre: string } | null;
@@ -74,9 +74,9 @@ export default function UsuariosIndex({ usuarios, empresas, roles, locales }: Pr
             email:      usuario.email,
             password:   '',
             telefono:   usuario.telefono ?? '',
-            rol_id:     String(usuario.rol_id),
+            rol_id:     usuario.rol_id != null ? String(usuario.rol_id) : '',
             local_id:   usuario.local_id ? String(usuario.local_id) : '',
-            empresa_id: String(usuario.empresa_id),
+            empresa_id: usuario.empresa_id ? String(usuario.empresa_id) : '',
         });
         setModal(true);
     };
