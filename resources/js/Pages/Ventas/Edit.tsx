@@ -37,8 +37,9 @@ export default function VentasEdit({ venta, empresas, locales, clientes, servici
                 producto_id:      d.producto_id ? String(d.producto_id) : '',
                 unidad_medida_id: d.unidad_medida_id ? String(d.unidad_medida_id) : '',
                 descripcion:      d.descripcion,
-                cantidad:         String(d.cantidad),
-                precio_unitario:  String(d.precio_unitario),
+                cantidad:           String(d.cantidad),
+                precio_unitario:    String(d.precio_unitario),
+                precio_referencial: '',
             }))
             : [detalleVacio('servicio')],
     });
