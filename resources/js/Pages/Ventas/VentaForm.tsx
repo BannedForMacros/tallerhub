@@ -7,13 +7,14 @@ import SelectField from '@/Components/SelectField';
 import { ProductoAlmacen, Local, Empresa, Cliente, Servicio, Inventario } from '@/types';
 
 interface DetalleForm {
-    tipo:             'servicio' | 'producto';
-    servicio_id:      string;
-    producto_id:      string;
-    unidad_medida_id: string;
-    descripcion:      string;
-    cantidad:         string;
-    precio_unitario:  string;
+    tipo:               'servicio' | 'producto';
+    servicio_id:        string;
+    producto_id:        string;
+    unidad_medida_id:   string;
+    descripcion:        string;
+    cantidad:           string;
+    precio_unitario:    string;
+    precio_referencial: string;
 }
 
 interface RecepcionOpcion {
@@ -50,12 +51,13 @@ interface Props {
 
 export const detalleVacio = (tipo: 'servicio' | 'producto' = 'servicio'): DetalleForm => ({
     tipo,
-    servicio_id:      '',
-    producto_id:      '',
-    unidad_medida_id: '',
-    descripcion:      '',
-    cantidad:         '1',
-    precio_unitario:  '',
+    servicio_id:        '',
+    producto_id:        '',
+    unidad_medida_id:   '',
+    descripcion:        '',
+    cantidad:           '1',
+    precio_unitario:    '',
+    precio_referencial: '',
 });
 
 export default function VentaForm({
@@ -111,13 +113,18 @@ export default function VentaForm({
         const nuevos = [...data.detalles];
         nuevos[i] = { ...nuevos[i], [campo]: valor };
 
-        // Al seleccionar servicio: precargar descripción y precio
+        // Al seleccionar servicio: precargar descripción y precio referencial
         if (campo === 'servicio_id' && valor) {
             const srv = servicios.find(s => s.id === Number(valor));
             if (srv) {
-                nuevos[i].descripcion      = srv.nombre;
-                nuevos[i].precio_unitario  = String(srv.precio);
+                nuevos[i].descripcion        = srv.nombre;
+                nuevos[i].precio_unitario    = String(srv.precio);
+                nuevos[i].precio_referencial = String(srv.precio);
             }
+        }
+        // Al limpiar servicio: limpiar precio referencial
+        if (campo === 'servicio_id' && !valor) {
+            nuevos[i].precio_referencial = '';
         }
 
         // Al seleccionar producto: precargar unidad principal, descripción y precio de venta
@@ -270,14 +277,18 @@ export default function VentaForm({
 
                     <div style={{ border: '1px solid #E2E8F0', borderTop: 'none', borderRadius: '0 0 10px 10px', minWidth: 1000 }}>
                         {data.detalles.map((d: DetalleForm, i: number) => {
-                            const esServicio = d.tipo === 'servicio';
-                            const prod       = productos.find(p => p.id === Number(d.producto_id));
-                            const unidades   = prod?.producto_unidades ?? [];
-                            const invItem    = getInventario(d.producto_id, d.unidad_medida_id);
-                            const stock      = invItem ? Number(invItem.stock) : null;
-                            const costoRef   = invItem?.precio_promedio ?? 0;
-                            const cantidad   = parseFloat(d.cantidad) || 0;
-                            const stockInsuf = !esServicio && stock !== null && d.cantidad !== '' && cantidad > stock;
+                            const esServicio  = d.tipo === 'servicio';
+                            const prod        = productos.find(p => p.id === Number(d.producto_id));
+                            const unidades    = prod?.producto_unidades ?? [];
+                            const invItem     = getInventario(d.producto_id, d.unidad_medida_id);
+                            const stock       = invItem ? Number(invItem.stock) : null;
+                            const costoRef    = invItem?.precio_promedio ?? 0;
+                            const cantidad    = parseFloat(d.cantidad) || 0;
+                            const stockInsuf  = !esServicio && stock !== null && d.cantidad !== '' && cantidad > stock;
+                            const precioRef   = esServicio && d.precio_referencial ? parseFloat(d.precio_referencial) : null;
+                            const precioActual = parseFloat(d.precio_unitario);
+                            const precioBajo  = precioRef !== null && !isNaN(precioActual) && precioActual < precioRef;
+                            const precioAlto  = precioRef !== null && !isNaN(precioActual) && precioActual > precioRef;
 
                             return (
                                 <div key={i} style={{
@@ -395,11 +406,31 @@ export default function VentaForm({
                                             onChange={e => actualizarDetalle(i, 'precio_unitario', e.target.value)}
                                             style={{
                                                 width: '100%', padding: '10px 8px', borderRadius: 10,
-                                                border: '1.5px solid #2563EB', fontSize: 13, fontWeight: 700,
+                                                border: `1.5px solid ${precioBajo ? '#D97706' : precioAlto ? '#2563EB' : '#2563EB'}`,
+                                                fontSize: 13, fontWeight: 700,
                                                 outline: 'none', boxSizing: 'border-box',
-                                                textAlign: 'right', backgroundColor: '#EFF6FF',
+                                                textAlign: 'right',
+                                                backgroundColor: precioBajo ? '#FFFBEB' : '#EFF6FF',
                                             }}
                                         />
+                                        {/* Aviso precio menor al referencial */}
+                                        {precioBajo && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 2 }}>
+                                                <AlertTriangle size={10} color="#D97706" />
+                                                <span style={{ fontSize: 10, color: '#D97706', fontWeight: 600 }}>
+                                                    Menor al ref. S/ {Number(precioRef).toFixed(2)}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {/* Aviso precio mayor al referencial */}
+                                        {precioAlto && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 2 }}>
+                                                <AlertTriangle size={10} color="#2563EB" />
+                                                <span style={{ fontSize: 10, color: '#2563EB', fontWeight: 600 }}>
+                                                    Mayor al ref. S/ {Number(precioRef).toFixed(2)}
+                                                </span>
+                                            </div>
+                                        )}
                                         {/* Subtotal por fila */}
                                         <p style={{ margin: '3px 0 0', fontSize: 11, color: '#64748B', textAlign: 'right' }}>
                                             = S/ {subtotalDetalle(d).toFixed(2)}
