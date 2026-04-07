@@ -18,7 +18,7 @@ interface Props extends PageProps {
 }
 
 const emptyForm = {
-    nombre: '', dni: '', telefono: '', email: '', direccion: '', empresa_id: '',
+    nombre: '', tipo_documento: 'DNI', dni: '', telefono: '', email: '', direccion: '', empresa_id: '',
 };
 
 export default function ClientesIndex({ clientes, empresas }: Props) {

@@ -50,6 +50,7 @@ Route::middleware('auth')->group(function () {
 
     // CLIENTES
     Route::get   ('/clientes',                  [ClienteController::class, 'index'])->name('clientes.index');
+    Route::get   ('/consulta-documento',        [ClienteController::class, 'consultaDocumento'])->name('consulta.documento');
     Route::post  ('/clientes',                  [ClienteController::class, 'store'])->name('clientes.store');
     Route::put   ('/clientes/{cliente}',        [ClienteController::class, 'update'])->name('clientes.update');
     Route::patch ('/clientes/{cliente}/toggle', [ClienteController::class, 'toggleActivo'])->name('clientes.toggle');

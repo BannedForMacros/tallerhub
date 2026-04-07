@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Models\Cliente;
 use App\Models\Empresa;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
 
 class ClienteController extends Controller
@@ -75,6 +76,43 @@ class ClienteController extends Controller
         $this->verificarPropiedad($cliente);
         $cliente->update(['activo' => !$cliente->activo]);
         return back()->with('success', 'Estado actualizado.');
+    }
+
+    public function consultaDocumento(Request $request)
+    {
+        $numero = trim($request->query('numero', ''));
+
+        if (!in_array(strlen($numero), [8, 11])) {
+            return response()->json(['error' => 'Ingresa un DNI (8 dígitos) o RUC (11 dígitos)'], 422);
+        }
+
+        $token = config('services.decolecta.token');
+        $tipo  = strlen($numero) === 8 ? 'dni' : 'ruc';
+        $url   = $tipo === 'dni'
+            ? "https://api.decolecta.com/v1/reniec/dni?numero={$numero}"
+            : "https://api.decolecta.com/v1/sunat/ruc?numero={$numero}";
+
+        $resp = Http::withToken($token)
+            ->withHeaders(['Content-Type' => 'application/json'])
+            ->get($url);
+
+        if (!$resp->successful()) {
+            return response()->json(['error' => 'No se encontró información para este número'], 404);
+        }
+
+        $d = $resp->json();
+
+        if ($tipo === 'dni') {
+            $nombre = $d['full_name']
+                ?? trim("{$d['first_name']} {$d['first_last_name']} {$d['second_last_name']}");
+            return response()->json(['tipo' => 'dni', 'nombre' => $nombre, 'direccion' => '']);
+        }
+
+        return response()->json([
+            'tipo'      => 'ruc',
+            'nombre'    => $d['razon_social'] ?? '',
+            'direccion' => $d['direccion']    ?? '',
+        ]);
     }
 
     private function verificarPropiedad(Cliente $cliente): void

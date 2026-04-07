@@ -1,7 +1,7 @@
 import { LabelHTMLAttributes } from 'react';
 
 interface Props {
-    label?: string; // Ahora es opcional
+    label?: string;
     name: string;
     value: string | number;
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -9,12 +9,13 @@ interface Props {
     placeholder?: string;
     error?: string;
     required?: boolean;
-    styleContainer?: React.CSSProperties; // Para control extra
+    disabled?: boolean;
+    styleContainer?: React.CSSProperties;
 }
 
 export default function InputField({
     label, name, value, onChange,
-    type = 'text', placeholder, error, required, styleContainer
+    type = 'text', placeholder, error, required, disabled, styleContainer
 }: Props) {
     return (
         <div style={{ marginBottom: label ? 18 : 0, ...styleContainer }}>
@@ -33,15 +34,16 @@ export default function InputField({
                 value={value}
                 onChange={onChange}
                 placeholder={placeholder}
-                // FIX: Quitar cambio de decimales al hacer scroll
+                disabled={disabled}
                 onWheel={(e) => e.currentTarget.blur()}
                 style={{
                     width: '100%', padding: '11px 14px',
                     fontSize: 15, borderRadius: 10,
                     border: `1.5px solid ${error ? '#EF4444' : '#E2E8F0'}`,
-                    outline: 'none', color: '#1E293B',
-                    backgroundColor: '#fff', transition: 'all 0.2s',
-                    height: '46px', // Altura fija para igualar al SelectField
+                    outline: 'none', color: disabled ? '#64748B' : '#1E293B',
+                    backgroundColor: disabled ? '#F1F5F9' : '#fff',
+                    transition: 'all 0.2s', cursor: disabled ? 'not-allowed' : 'text',
+                    height: '46px',
                     boxSizing: 'border-box'
                 }}
                 onFocus={(e) => {

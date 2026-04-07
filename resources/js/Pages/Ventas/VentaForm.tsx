@@ -1,9 +1,11 @@
-import { useMemo } from 'react';
-import { Plus, Trash2, Save, ArrowLeft, Tag, Package, AlertTriangle, CreditCard } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Plus, Trash2, Save, ArrowLeft, Tag, Package, AlertTriangle, CreditCard, UserPlus } from 'lucide-react';
 import { Link } from '@inertiajs/react';
 import Button from '@/Components/Button';
 import InputField from '@/Components/InputField';
 import SelectField from '@/Components/SelectField';
+import Modal from '@/Components/Modal';
+import ClienteForm from '@/Components/ClienteForm';
 import { ProductoAlmacen, Local, Empresa, Cliente, Servicio, Inventario, MetodoPago } from '@/types';
 
 interface DetalleForm {
@@ -81,17 +83,57 @@ export default function VentaForm({
     esSuperAdmin, puedeEditarFecha, esEdicion = false, onGuardar,
 }: Props) {
 
+    // Modal nuevo cliente
+    const [modalCliente, setModalCliente]         = useState(false);
+    const [clientesExtra, setClientesExtra]       = useState<Cliente[]>([]);
+    const [nuevoClienteData, setNuevoClienteData] = useState({ nombre: '', tipo_documento: 'DNI', dni: '', telefono: '', email: '', direccion: '', empresa_id: '' });
+    const [clienteProcessing, setClienteProcessing] = useState(false);
+    const [clienteErrors, setClienteErrors]       = useState<Partial<Record<string, string>>>({});
+
+    const crearCliente = async () => {
+        setClienteProcessing(true);
+        setClienteErrors({});
+        try {
+            const csrfMeta = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
+            const res = await fetch(route('clientes.store'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    ...(csrfMeta ? { 'X-CSRF-TOKEN': csrfMeta.content } : {}),
+                },
+                body: JSON.stringify(nuevoClienteData),
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                setClienteErrors(json.errors ?? { nombre: 'Error al crear cliente' });
+                return;
+            }
+            const creado: Cliente = json;
+            setClientesExtra(prev => [...prev, creado]);
+            setData('cliente_id', String(creado.id));
+            setModalCliente(false);
+            setNuevoClienteData({ nombre: '', tipo_documento: 'DNI', dni: '', telefono: '', email: '', direccion: '', empresa_id: '' });
+        } catch {
+            setClienteErrors({ nombre: 'Error de conexión' });
+        } finally {
+            setClienteProcessing(false);
+        }
+    };
+
     const localesFiltrados = useMemo(() =>
         esSuperAdmin && data.empresa_id
             ? locales.filter(l => l.empresa_id === Number(data.empresa_id))
             : locales
     , [data.empresa_id, locales]);
 
+    const todosClientes = useMemo(() => [...clientes, ...clientesExtra], [clientes, clientesExtra]);
     const clientesFiltrados = useMemo(() =>
         esSuperAdmin && data.empresa_id
-            ? clientes.filter(c => c.empresa_id === Number(data.empresa_id))
-            : clientes
-    , [data.empresa_id, clientes]);
+            ? todosClientes.filter(c => c.empresa_id === Number(data.empresa_id))
+            : todosClientes
+    , [data.empresa_id, todosClientes]);
 
     const serviciosFiltrados = useMemo(() =>
         esSuperAdmin && data.empresa_id
@@ -240,12 +282,35 @@ export default function VentaForm({
                         options={localesFiltrados.map(l => ({ value: l.id, label: l.nombre }))}
                         placeholder="Selecciona local" error={errors.local_id} required
                     />
-                    <SelectField
-                        label="Cliente" name="cliente_id" value={data.cliente_id}
-                        onChange={e => setData('cliente_id', e.target.value)}
-                        options={clientesFiltrados.map(c => ({ value: c.id, label: c.nombre }))}
-                        placeholder="Cliente (opcional)"
-                    />
+                    <div>
+                        <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#1E293B', marginBottom: 7 }}>
+                            Cliente
+                        </label>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <div style={{ flex: 1 }}>
+                                <SelectField
+                                    label="" name="cliente_id" value={data.cliente_id}
+                                    onChange={e => setData('cliente_id', e.target.value)}
+                                    options={clientesFiltrados.map(c => ({ value: c.id, label: c.nombre }))}
+                                    placeholder="Cliente (opcional)"
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setModalCliente(true)}
+                                title="Crear nuevo cliente"
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: 5,
+                                    padding: '0 12px', height: 46, borderRadius: 10,
+                                    border: '1.5px solid #2563EB', backgroundColor: '#EFF6FF',
+                                    color: '#2563EB', cursor: 'pointer', fontSize: 12,
+                                    fontWeight: 700, whiteSpace: 'nowrap',
+                                }}
+                            >
+                                <UserPlus size={14} /> Nuevo
+                            </button>
+                        </div>
+                    </div>
                     {puedeEditarFecha ? (
                         <InputField
                             label="Fecha" name="fecha" value={data.fecha} type="date"
@@ -694,6 +759,23 @@ export default function VentaForm({
                     {esEdicion ? 'Guardar Cambios' : 'Registrar Venta'}
                 </Button>
             </div>
+
+            {/* Modal nuevo cliente */}
+            <Modal show={modalCliente} onClose={() => setModalCliente(false)} title="Nuevo Cliente" maxWidth="md">
+                <ClienteForm
+                    form={{
+                        data: nuevoClienteData as any,
+                        setData: (key: any, value: string) =>
+                            setNuevoClienteData(prev => ({ ...prev, [key]: value })),
+                        processing: clienteProcessing,
+                        errors: clienteErrors,
+                    }}
+                    onGuardar={crearCliente}
+                    onCancelar={() => setModalCliente(false)}
+                    empresas={[]}
+                    esSuperAdmin={false}
+                />
+            </Modal>
         </div>
     );
 }

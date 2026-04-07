@@ -189,6 +189,7 @@ export interface OrdenServicio {
 
 export interface ClienteFormData {
     nombre: string;
+    tipo_documento: string;
     dni: string;
     telefono: string;
     email: string;

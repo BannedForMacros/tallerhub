@@ -61,7 +61,7 @@ export default function RecepcionesIndex({ recepciones, empresas, clientes, loca
     });
 
     const formCliente = useForm<ClienteFormData>({
-        nombre: '', dni: '', telefono: '', email: '', direccion: '', empresa_id: '',
+        nombre: '', tipo_documento: 'DNI', dni: '', telefono: '', email: '', direccion: '', empresa_id: '',
     });
 
     // Filtra clientes, locales y tecnicos según empresa seleccionada (solo superadmin)
