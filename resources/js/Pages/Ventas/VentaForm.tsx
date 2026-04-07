@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
-import { Plus, Trash2, Save, ArrowLeft, Tag, Package, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Save, ArrowLeft, Tag, Package, AlertTriangle, CreditCard } from 'lucide-react';
 import { Link } from '@inertiajs/react';
 import Button from '@/Components/Button';
 import InputField from '@/Components/InputField';
 import SelectField from '@/Components/SelectField';
-import { ProductoAlmacen, Local, Empresa, Cliente, Servicio, Inventario } from '@/types';
+import { ProductoAlmacen, Local, Empresa, Cliente, Servicio, Inventario, MetodoPago } from '@/types';
 
 interface DetalleForm {
     tipo:               'servicio' | 'producto';
@@ -23,6 +23,12 @@ interface RecepcionOpcion {
     label:  string;
 }
 
+interface PagoForm {
+    metodo_pago_id: string;
+    cuenta_pago_id: string;
+    monto:          string;
+}
+
 interface Props {
     data: {
         empresa_id:    string;
@@ -33,6 +39,7 @@ interface Props {
         descuento:     string;
         fecha:         string;
         detalles:      DetalleForm[];
+        pagos:         PagoForm[];
     };
     setData:      (key: any, value: any) => void;
     errors:       Record<string, string>;
@@ -44,9 +51,11 @@ interface Props {
     productos:    ProductoAlmacen[];
     inventario:   Inventario[];
     recepciones:  RecepcionOpcion[];
-    esSuperAdmin: boolean;
-    esEdicion?:   boolean;
-    onGuardar:    () => void;
+    metodosPago:      MetodoPago[];
+    esSuperAdmin:     boolean;
+    puedeEditarFecha: boolean;
+    esEdicion?:       boolean;
+    onGuardar:        () => void;
 }
 
 export const detalleVacio = (tipo: 'servicio' | 'producto' = 'servicio'): DetalleForm => ({
@@ -60,10 +69,16 @@ export const detalleVacio = (tipo: 'servicio' | 'producto' = 'servicio'): Detall
     precio_referencial: '',
 });
 
+export const pagoVacio = (): PagoForm => ({
+    metodo_pago_id: '',
+    cuenta_pago_id: '',
+    monto: '',
+});
+
 export default function VentaForm({
     data, setData, errors, processing,
-    empresas, locales, clientes, servicios, productos, inventario, recepciones,
-    esSuperAdmin, esEdicion = false, onGuardar,
+    empresas, locales, clientes, servicios, productos, inventario, recepciones, metodosPago,
+    esSuperAdmin, puedeEditarFecha, esEdicion = false, onGuardar,
 }: Props) {
 
     const localesFiltrados = useMemo(() =>
@@ -148,6 +163,29 @@ export default function VentaForm({
     const descuento = parseFloat(data.descuento) || 0;
     const total     = subtotal - descuento;
 
+    // Pagos
+    const agregarPago = () => {
+        setData('pagos', [...data.pagos, pagoVacio()]);
+    };
+
+    const quitarPago = (i: number) => {
+        setData('pagos', data.pagos.filter((_: any, idx: number) => idx !== i));
+    };
+
+    const actualizarPago = (i: number, campo: keyof PagoForm, valor: string) => {
+        const nuevos = [...data.pagos];
+        nuevos[i] = { ...nuevos[i], [campo]: valor };
+        // Al cambiar método, limpiar cuenta
+        if (campo === 'metodo_pago_id') nuevos[i].cuenta_pago_id = '';
+        setData('pagos', nuevos);
+    };
+
+    const totalPagado = useMemo(
+        () => data.pagos.reduce((acc: number, p: PagoForm) => acc + (parseFloat(p.monto) || 0), 0),
+        [data.pagos]
+    );
+    const restante = total - totalPagado;
+
     return (
         <div>
             {/* Header */}
@@ -208,11 +246,26 @@ export default function VentaForm({
                         options={clientesFiltrados.map(c => ({ value: c.id, label: c.nombre }))}
                         placeholder="Cliente (opcional)"
                     />
-                    <InputField
-                        label="Fecha" name="fecha" value={data.fecha} type="date"
-                        onChange={e => setData('fecha', e.target.value)}
-                        error={errors.fecha} required
-                    />
+                    {puedeEditarFecha ? (
+                        <InputField
+                            label="Fecha" name="fecha" value={data.fecha} type="date"
+                            onChange={e => setData('fecha', e.target.value)}
+                            error={errors.fecha} required
+                        />
+                    ) : (
+                        <div>
+                            <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 4 }}>
+                                Fecha
+                            </label>
+                            <div style={{
+                                padding: '10px 12px', borderRadius: 10,
+                                border: '1.5px solid #E2E8F0', backgroundColor: '#F8FAFC',
+                                fontSize: 13, color: '#64748B',
+                            }}>
+                                {data.fecha}
+                            </div>
+                        </div>
+                    )}
                     {/* Recepción vinculada */}
                     <div style={{ gridColumn: '1 / -1' }}>
                         <SelectField
@@ -491,6 +544,142 @@ export default function VentaForm({
                         </span>
                     </div>
                 </div>
+            </div>
+
+            {/* Métodos de Pago */}
+            <div style={{ backgroundColor: '#fff', borderRadius: 14, border: '1px solid #E2E8F0', padding: 20, marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <CreditCard size={16} color="#2563EB" />
+                        <h2 style={{ fontSize: 14, fontWeight: 700, color: '#1E293B', margin: 0 }}>Métodos de Pago</h2>
+                        <span style={{ fontSize: 12, color: '#94A3B8' }}>(opcional)</span>
+                    </div>
+                    <button
+                        onClick={agregarPago}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: 6, fontSize: 12,
+                            color: '#2563EB', background: 'none', border: '1px solid #2563EB',
+                            borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontWeight: 600,
+                        }}
+                    >
+                        <Plus size={13} /> Agregar pago
+                    </button>
+                </div>
+
+                {data.pagos.length === 0 ? (
+                    <p style={{ fontSize: 13, color: '#94A3B8', textAlign: 'center', padding: '12px 0' }}>
+                        Sin método de pago registrado
+                    </p>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {data.pagos.map((pago: PagoForm, i: number) => {
+                            const metodo = metodosPago.find(m => m.id === Number(pago.metodo_pago_id));
+                            const cuentas = metodo?.cuentas_activas ?? [];
+                            return (
+                                <div key={i} style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: '1fr 1fr 140px 36px',
+                                    gap: 10, alignItems: 'start',
+                                    backgroundColor: '#F8FAFC',
+                                    border: '1px solid #E2E8F0',
+                                    borderRadius: 10, padding: '10px 14px',
+                                }}>
+                                    {/* Método */}
+                                    <SelectField
+                                        label="Método"
+                                        name={`metodo_${i}`}
+                                        value={pago.metodo_pago_id}
+                                        onChange={e => actualizarPago(i, 'metodo_pago_id', e.target.value)}
+                                        options={metodosPago.map(m => ({ value: m.id, label: m.nombre }))}
+                                        placeholder="Selecciona método"
+                                        error={errors[`pagos.${i}.metodo_pago_id`]}
+                                    />
+
+                                    {/* Cuenta */}
+                                    <SelectField
+                                        label="Cuenta"
+                                        name={`cuenta_${i}`}
+                                        value={pago.cuenta_pago_id}
+                                        onChange={e => actualizarPago(i, 'cuenta_pago_id', e.target.value)}
+                                        options={cuentas.map((c: any) => ({
+                                            value: c.id,
+                                            label: c.nombre + (c.numero_cuenta ? ` — ${c.numero_cuenta}` : ''),
+                                        }))}
+                                        placeholder={pago.metodo_pago_id ? (cuentas.length ? 'Selecciona cuenta' : 'Sin cuentas') : '— primero elige método —'}
+                                        error={errors[`pagos.${i}.cuenta_pago_id`]}
+                                    />
+
+                                    {/* Monto */}
+                                    <div>
+                                        <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 4 }}>
+                                            Monto (S/)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={pago.monto}
+                                            min="0.01"
+                                            step="0.01"
+                                            placeholder="0.00"
+                                            onWheel={e => e.currentTarget.blur()}
+                                            onChange={e => actualizarPago(i, 'monto', e.target.value)}
+                                            style={{
+                                                width: '100%', padding: '10px 10px', borderRadius: 10,
+                                                border: `1.5px solid ${errors[`pagos.${i}.monto`] ? '#EF4444' : '#E2E8F0'}`,
+                                                fontSize: 13, fontWeight: 700,
+                                                outline: 'none', boxSizing: 'border-box', textAlign: 'right',
+                                            }}
+                                        />
+                                        {errors[`pagos.${i}.monto`] && (
+                                            <p style={{ fontSize: 11, color: '#EF4444', marginTop: 2 }}>{errors[`pagos.${i}.monto`]}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Quitar */}
+                                    <div style={{ paddingTop: 22, textAlign: 'center' }}>
+                                        <button
+                                            onClick={() => quitarPago(i)}
+                                            style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: 4 }}
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+
+                {/* Resumen de pagos */}
+                {data.pagos.length > 0 && (
+                    <div style={{ marginTop: 14, display: 'flex', justifyContent: 'flex-end' }}>
+                        <div style={{ minWidth: 240 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                                <span style={{ fontSize: 13, color: '#64748B' }}>Total venta</span>
+                                <span style={{ fontSize: 13, fontWeight: 600, color: '#1E293B' }}>S/ {total.toFixed(2)}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                                <span style={{ fontSize: 13, color: '#64748B' }}>Total pagado</span>
+                                <span style={{ fontSize: 13, fontWeight: 700, color: '#16A34A' }}>S/ {totalPagado.toFixed(2)}</span>
+                            </div>
+                            <div style={{
+                                display: 'flex', justifyContent: 'space-between',
+                                padding: '8px 12px', borderRadius: 8,
+                                backgroundColor: restante > 0.005 ? '#FEF2F2' : restante < -0.005 ? '#FFF7ED' : '#F0FDF4',
+                                border: `1px solid ${restante > 0.005 ? '#FECACA' : restante < -0.005 ? '#FED7AA' : '#BBF7D0'}`,
+                            }}>
+                                <span style={{ fontSize: 13, fontWeight: 700, color: '#1E293B' }}>
+                                    {restante > 0.005 ? 'Pendiente' : restante < -0.005 ? 'Vuelto' : 'Saldado ✓'}
+                                </span>
+                                <span style={{
+                                    fontSize: 13, fontWeight: 800,
+                                    color: restante > 0.005 ? '#DC2626' : restante < -0.005 ? '#D97706' : '#16A34A',
+                                }}>
+                                    S/ {Math.abs(restante).toFixed(2)}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Botones */}

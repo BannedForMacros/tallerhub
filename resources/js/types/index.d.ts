@@ -7,6 +7,7 @@ export interface User {
     empresa_id?: number;
     local_id?: number;
     esSuperAdmin: boolean;
+    esDueno:      boolean;
     email_verified_at: string | null;
 }
 
@@ -361,6 +362,16 @@ export interface VentaDetalle {
     unidad_medida?: UnidadMedida;
 }
 
+export interface VentaPago {
+    id: number;
+    venta_id: number;
+    metodo_pago_id: number;
+    cuenta_pago_id: number | null;
+    monto: number;
+    metodo_pago?: MetodoPago;
+    cuenta_pago?: CuentaPago;
+}
+
 export interface Venta {
     id: number;
     codigo: string;
@@ -381,6 +392,7 @@ export interface Venta {
     usuario?: Usuario;
     recepcion?: Recepcion;
     detalles?: VentaDetalle[];
+    pagos?: VentaPago[];
 }
 
 export interface Servicio {

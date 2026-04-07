@@ -3,7 +3,7 @@ import { toast, Toaster } from 'react-hot-toast';
 import { Head } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import VentaForm, { detalleVacio } from './VentaForm';
-import { PageProps, ProductoAlmacen, Local, Empresa, Cliente, Servicio, Inventario } from '@/types';
+import { PageProps, ProductoAlmacen, Local, Empresa, Cliente, Servicio, Inventario, MetodoPago } from '@/types';
 
 interface RecepcionOpcion { id: number; codigo: string; label: string; }
 
@@ -15,11 +15,13 @@ interface Props extends PageProps {
     productos:   ProductoAlmacen[];
     inventario:  Inventario[];
     recepciones: RecepcionOpcion[];
+    metodosPago: MetodoPago[];
 }
 
-export default function VentasCreate({ empresas, locales, clientes, servicios, productos, inventario, recepciones }: Props) {
+export default function VentasCreate({ empresas, locales, clientes, servicios, productos, inventario, recepciones, metodosPago }: Props) {
     const { auth } = usePage<Props>().props;
-    const esSuperAdmin = auth.user.esSuperAdmin;
+    const esSuperAdmin     = auth.user.esSuperAdmin;
+    const puedeEditarFecha = esSuperAdmin || auth.user.esDueno;
 
     const { data, setData, post, processing, errors } = useForm({
         empresa_id:    '',
@@ -30,6 +32,7 @@ export default function VentasCreate({ empresas, locales, clientes, servicios, p
         descuento:     '0',
         fecha:         new Date().toISOString().split('T')[0],
         detalles:      [detalleVacio('servicio')],
+        pagos:         [] as { metodo_pago_id: string; cuenta_pago_id: string; monto: string }[],
     });
 
     const guardar = () => {
@@ -46,7 +49,8 @@ export default function VentasCreate({ empresas, locales, clientes, servicios, p
                 data={data} setData={setData} errors={errors} processing={processing}
                 empresas={empresas} locales={locales} clientes={clientes}
                 servicios={servicios} productos={productos} inventario={inventario}
-                recepciones={recepciones} esSuperAdmin={esSuperAdmin} onGuardar={guardar}
+                recepciones={recepciones} metodosPago={metodosPago}
+                esSuperAdmin={esSuperAdmin} puedeEditarFecha={puedeEditarFecha} onGuardar={guardar}
             />
         </AuthenticatedLayout>
     );

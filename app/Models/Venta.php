@@ -29,6 +29,7 @@ class Venta extends Model
     public function recepcion() { return $this->belongsTo(Recepcion::class); }
     public function usuario()   { return $this->belongsTo(User::class, 'user_id'); }
     public function detalles()  { return $this->hasMany(VentaDetalle::class); }
+    public function pagos()     { return $this->hasMany(VentaPago::class); }
 
     public static function generarCodigo(int $empresaId): string
     {

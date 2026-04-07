@@ -3,7 +3,7 @@ import { toast, Toaster } from 'react-hot-toast';
 import { Head } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import VentaForm, { detalleVacio } from './VentaForm';
-import { PageProps, Venta, ProductoAlmacen, Local, Empresa, Cliente, Servicio, Inventario } from '@/types';
+import { PageProps, Venta, ProductoAlmacen, Local, Empresa, Cliente, Servicio, Inventario, MetodoPago } from '@/types';
 
 interface RecepcionOpcion { id: number; codigo: string; label: string; }
 
@@ -16,11 +16,13 @@ interface Props extends PageProps {
     productos:   ProductoAlmacen[];
     inventario:  Inventario[];
     recepciones: RecepcionOpcion[];
+    metodosPago: MetodoPago[];
 }
 
-export default function VentasEdit({ venta, empresas, locales, clientes, servicios, productos, inventario, recepciones }: Props) {
+export default function VentasEdit({ venta, empresas, locales, clientes, servicios, productos, inventario, recepciones, metodosPago }: Props) {
     const { auth } = usePage<Props>().props;
-    const esSuperAdmin = auth.user.esSuperAdmin;
+    const esSuperAdmin     = auth.user.esSuperAdmin;
+    const puedeEditarFecha = esSuperAdmin || auth.user.esDueno;
 
     const { data, setData, put, processing, errors } = useForm({
         empresa_id:    String(venta.empresa_id),
@@ -32,16 +34,23 @@ export default function VentasEdit({ venta, empresas, locales, clientes, servici
         fecha:         venta.fecha.split('T')[0],
         detalles: venta.detalles?.length
             ? venta.detalles.map(d => ({
-                tipo:             d.tipo as 'servicio' | 'producto',
-                servicio_id:      d.servicio_id ? String(d.servicio_id) : '',
-                producto_id:      d.producto_id ? String(d.producto_id) : '',
-                unidad_medida_id: d.unidad_medida_id ? String(d.unidad_medida_id) : '',
-                descripcion:      d.descripcion,
+                tipo:               d.tipo as 'servicio' | 'producto',
+                servicio_id:        d.servicio_id ? String(d.servicio_id) : '',
+                producto_id:        d.producto_id ? String(d.producto_id) : '',
+                unidad_medida_id:   d.unidad_medida_id ? String(d.unidad_medida_id) : '',
+                descripcion:        d.descripcion,
                 cantidad:           String(d.cantidad),
                 precio_unitario:    String(d.precio_unitario),
                 precio_referencial: '',
             }))
             : [detalleVacio('servicio')],
+        pagos: venta.pagos?.length
+            ? venta.pagos.map(p => ({
+                metodo_pago_id: String(p.metodo_pago_id),
+                cuenta_pago_id: p.cuenta_pago_id ? String(p.cuenta_pago_id) : '',
+                monto:          String(p.monto),
+            }))
+            : [],
     });
 
     const guardar = () => {
@@ -58,7 +67,8 @@ export default function VentasEdit({ venta, empresas, locales, clientes, servici
                 data={data} setData={setData} errors={errors} processing={processing}
                 empresas={empresas} locales={locales} clientes={clientes}
                 servicios={servicios} productos={productos} inventario={inventario}
-                recepciones={recepciones} esSuperAdmin={esSuperAdmin}
+                recepciones={recepciones} metodosPago={metodosPago}
+                esSuperAdmin={esSuperAdmin} puedeEditarFecha={puedeEditarFecha}
                 esEdicion={true} onGuardar={guardar}
             />
         </AuthenticatedLayout>

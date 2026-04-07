@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Venta;
 use App\Models\VentaDetalle;
+use App\Models\VentaPago;
 use App\Models\Inventario;
 use App\Models\SalidaAlmacen;
 use App\Models\SalidaAlmacenDetalle;
@@ -12,6 +13,7 @@ use App\Models\ProductoAlmacen;
 use App\Models\Local;
 use App\Models\Empresa;
 use App\Models\Cliente;
+use App\Models\MetodoPago;
 use App\Models\Correlativo;
 use App\Helpers\FechaHelper;
 use Illuminate\Http\Request;
@@ -70,7 +72,14 @@ class VentaController extends Controller
                 'label'  => "{$r->codigo} — {$r->cliente?->nombre} ({$r->tipo_equipo} {$r->marca})",
             ]);
 
-        return compact('empresas', 'locales', 'clientes', 'servicios', 'productos', 'inventario', 'recepciones');
+        // Métodos de pago con sus cuentas activas
+        $metodosPago = MetodoPago::with('cuentasActivas')
+            ->where('activo', 1)
+            ->when($empresaId, fn($q) => $q->where('empresa_id', $empresaId))
+            ->orderBy('nombre')
+            ->get();
+
+        return compact('empresas', 'locales', 'clientes', 'servicios', 'productos', 'inventario', 'recepciones', 'metodosPago');
     }
 
     public function index()
@@ -78,7 +87,7 @@ class VentaController extends Controller
         $user      = auth()->user();
         $empresaId = $user->esSuperAdmin() ? null : $user->empresa_id;
 
-        $ventas = Venta::with(['cliente', 'local', 'usuario', 'recepcion', 'detalles'])
+        $ventas = Venta::with(['cliente', 'local', 'usuario', 'recepcion', 'detalles', 'pagos.metodoPago', 'pagos.cuentaPago'])
             ->when($empresaId, fn($q) => $q->where('empresa_id', $empresaId))
             ->orderByDesc('id')
             ->get();
@@ -116,6 +125,10 @@ class VentaController extends Controller
             'detalles.*.descripcion'          => 'required|string|max:255',
             'detalles.*.cantidad'             => 'required|numeric|min:0.0001',
             'detalles.*.precio_unitario'      => 'required|numeric|min:0',
+            'pagos'                           => 'nullable|array',
+            'pagos.*.metodo_pago_id'          => 'required|exists:metodos_pago,id',
+            'pagos.*.cuenta_pago_id'          => 'nullable|exists:cuentas_pago,id',
+            'pagos.*.monto'                   => 'required|numeric|min:0.01',
         ]);
 
         $empresaId = $user->esSuperAdmin()
@@ -163,6 +176,16 @@ class VentaController extends Controller
                 'estado'        => 'pagado',
                 'fecha'         => $data['fecha'],
             ]);
+
+            // Guardar pagos
+            foreach ($data['pagos'] ?? [] as $pago) {
+                VentaPago::create([
+                    'venta_id'       => $venta->id,
+                    'metodo_pago_id' => $pago['metodo_pago_id'],
+                    'cuenta_pago_id' => $pago['cuenta_pago_id'] ?? null,
+                    'monto'          => $pago['monto'],
+                ]);
+            }
 
             // Crear salida de inventario para productos
             $productosParaSalida = collect($data['detalles'])
@@ -253,7 +276,7 @@ class VentaController extends Controller
 
     public function show(Venta $venta)
     {
-        $venta->load(['cliente', 'local', 'usuario', 'recepcion.cliente', 'detalles.servicio', 'detalles.producto', 'detalles.unidadMedida']);
+        $venta->load(['cliente', 'local', 'usuario', 'recepcion.cliente', 'detalles.servicio', 'detalles.producto', 'detalles.unidadMedida', 'pagos.metodoPago', 'pagos.cuentaPago']);
         return response()->json($venta);
     }
 
@@ -264,7 +287,7 @@ class VentaController extends Controller
 
         if (!$user->esSuperAdmin() && $venta->empresa_id !== $user->empresa_id) abort(403);
 
-        $venta->load(['detalles.servicio', 'detalles.producto', 'detalles.unidadMedida']);
+        $venta->load(['detalles.servicio', 'detalles.producto', 'detalles.unidadMedida', 'pagos.metodoPago', 'pagos.cuentaPago']);
 
         $datos = $this->getDatosFormulario($empresaId, $user->esSuperAdmin());
 
@@ -272,6 +295,95 @@ class VentaController extends Controller
             ...$datos,
             'venta' => $venta,
         ]);
+    }
+
+    public function update(Request $request, Venta $venta)
+    {
+        $user = auth()->user();
+
+        if (!$user->esSuperAdmin() && $venta->empresa_id !== $user->empresa_id) abort(403);
+
+        $data = $request->validate([
+            'local_id'                        => 'required|exists:locales,id',
+            'cliente_id'                      => 'nullable|exists:clientes,id',
+            'recepcion_id'                    => 'nullable|exists:recepciones,id',
+            'observaciones'                   => 'nullable|string',
+            'descuento'                       => 'nullable|numeric|min:0',
+            'fecha'                           => 'required|date',
+            'detalles'                        => 'required|array|min:1',
+            'detalles.*.tipo'                 => 'required|in:servicio,producto',
+            'detalles.*.servicio_id'          => 'nullable|exists:servicios,id',
+            'detalles.*.producto_id'          => 'nullable|exists:productos_almacen,id',
+            'detalles.*.unidad_medida_id'     => 'nullable|exists:unidades_medida,id',
+            'detalles.*.descripcion'          => 'required|string|max:255',
+            'detalles.*.cantidad'             => 'required|numeric|min:0.0001',
+            'detalles.*.precio_unitario'      => 'required|numeric|min:0',
+            'pagos'                           => 'nullable|array',
+            'pagos.*.metodo_pago_id'          => 'required|exists:metodos_pago,id',
+            'pagos.*.cuenta_pago_id'          => 'nullable|exists:cuentas_pago,id',
+            'pagos.*.monto'                   => 'required|numeric|min:0.01',
+        ]);
+
+        $empresaId = $venta->empresa_id;
+
+        DB::transaction(function () use ($data, $empresaId, $venta) {
+            // Calcular totales
+            $subtotal = collect($data['detalles'])->sum(fn($d) =>
+                (float) $d['cantidad'] * (float) $d['precio_unitario']
+            );
+            $descuento = (float) ($data['descuento'] ?? 0);
+            $total     = $subtotal - $descuento;
+
+            $venta->update([
+                'local_id'      => $data['local_id'],
+                'cliente_id'    => $data['cliente_id']   ?? null,
+                'recepcion_id'  => $data['recepcion_id'] ?? null,
+                'observaciones' => $data['observaciones'] ?? null,
+                'subtotal'      => $subtotal,
+                'descuento'     => $descuento,
+                'total'         => $total,
+                'fecha'         => $data['fecha'],
+            ]);
+
+            // Reemplazar detalles
+            $venta->detalles()->delete();
+            foreach ($data['detalles'] as $detalle) {
+                $precioCostoRef = 0;
+                if ($detalle['tipo'] === 'producto' && !empty($detalle['producto_id'])) {
+                    $precioCostoRef = (float) \App\Models\EntradaAlmacenDetalle::where('producto_id',      $detalle['producto_id'])
+                        ->where('unidad_medida_id', $detalle['unidad_medida_id'] ?? null)
+                        ->whereHas('entrada', fn($q) => $q->where('local_id', $data['local_id'])->where('activo', 1))
+                        ->avg('precio_unitario') ?? 0;
+                }
+
+                VentaDetalle::create([
+                    'venta_id'         => $venta->id,
+                    'tipo'             => $detalle['tipo'],
+                    'servicio_id'      => $detalle['servicio_id']      ?? null,
+                    'producto_id'      => $detalle['producto_id']      ?? null,
+                    'unidad_medida_id' => $detalle['unidad_medida_id'] ?? null,
+                    'descripcion'      => $detalle['descripcion'],
+                    'cantidad'         => $detalle['cantidad'],
+                    'precio_costo_ref' => $precioCostoRef,
+                    'precio_unitario'  => $detalle['precio_unitario'],
+                    'subtotal'         => (float) $detalle['cantidad'] * (float) $detalle['precio_unitario'],
+                ]);
+            }
+
+            // Reemplazar pagos
+            $venta->pagos()->delete();
+            foreach ($data['pagos'] ?? [] as $pago) {
+                VentaPago::create([
+                    'venta_id'       => $venta->id,
+                    'metodo_pago_id' => $pago['metodo_pago_id'],
+                    'cuenta_pago_id' => $pago['cuenta_pago_id'] ?? null,
+                    'monto'          => $pago['monto'],
+                ]);
+            }
+        });
+
+        return redirect()->route('ventas.index')
+            ->with('success', 'Venta actualizada correctamente.');
     }
 
     public function toggleActivo(Venta $venta)

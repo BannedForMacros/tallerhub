@@ -32,6 +32,7 @@ class HandleInertiaRequests extends Middleware
                     'empresa_id'   => $user->empresa_id,
                     'local_id'     => $user->local_id,
                     'esSuperAdmin' => $user->esSuperAdmin(),
+                    'esDueno'      => $user->esDueno(),
                 ] : null,
             ],
 
