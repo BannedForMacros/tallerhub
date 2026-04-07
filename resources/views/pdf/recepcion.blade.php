@@ -93,6 +93,7 @@
                     @endif
                 </td>
                 <td class="empresa-cell">
+                    <div style="font-size:16px; font-weight:900; text-transform:uppercase; letter-spacing:1px;">L&amp;G Servicio Técnico Especializado</div>
                     <h1>{{ $recepcion->empresa->nombre }}</h1>
                     <p>RUC: {{ $recepcion->empresa->ruc }}</p>
                     @if($recepcion->empresa->telefono)
@@ -107,7 +108,7 @@
                 </td>
                 <td class="codigo-cell">
                     <div class="titulo-doc">Orden de Recepción</div>
-                    <div class="num">Nº {{ str_pad($recepcion->id, 4, '0', STR_PAD_LEFT) }}</div>
+                    <div class="num">Nº {{ last(explode('-', $recepcion->codigo)) }}</div>
                     <div class="fecha">{{ \Carbon\Carbon::parse($recepcion->fecha_recepcion)->format('d/m/Y H:i') }}</div>
                     <div style="margin-top:4px; font-size:9px; font-weight:700;">
                         ESTADO:

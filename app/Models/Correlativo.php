@@ -29,6 +29,6 @@ class Correlativo extends Model
             return $row->fresh();
         });
 
-        return $tipo . '-' . str_pad($correlativo->ultimo, 6, '0', STR_PAD_LEFT);
+        return $tipo . '-' . $correlativo->ultimo;
     }
 }
