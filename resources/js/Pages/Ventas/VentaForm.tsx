@@ -4,6 +4,7 @@ import { Link } from '@inertiajs/react';
 import Button from '@/Components/Button';
 import InputField from '@/Components/InputField';
 import SelectField from '@/Components/SelectField';
+import SearchableSelectField from '@/Components/SearchableSelectField';
 import Modal from '@/Components/Modal';
 import ClienteForm from '@/Components/ClienteForm';
 import { ProductoAlmacen, Local, Empresa, Cliente, Servicio, Inventario, MetodoPago } from '@/types';
@@ -259,7 +260,7 @@ export default function VentaForm({
             {/* Datos generales */}
             <div style={{ backgroundColor: '#fff', borderRadius: 14, border: '1px solid #E2E8F0', padding: 20, marginBottom: 16 }}>
                 <h2 style={{ fontSize: 14, fontWeight: 700, color: '#1E293B', margin: '0 0 14px' }}>Datos Generales</h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0 16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
                     {esSuperAdmin && !esEdicion && (
                         <div style={{ gridColumn: '1 / -1' }}>
                             <SelectField
@@ -282,35 +283,6 @@ export default function VentaForm({
                         options={localesFiltrados.map(l => ({ value: l.id, label: l.nombre }))}
                         placeholder="Selecciona local" error={errors.local_id} required
                     />
-                    <div>
-                        <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#1E293B', marginBottom: 7 }}>
-                            Cliente
-                        </label>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                            <div style={{ flex: 1 }}>
-                                <SelectField
-                                    label="" name="cliente_id" value={data.cliente_id}
-                                    onChange={e => setData('cliente_id', e.target.value)}
-                                    options={clientesFiltrados.map(c => ({ value: c.id, label: c.nombre }))}
-                                    placeholder="Cliente (opcional)"
-                                />
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setModalCliente(true)}
-                                title="Crear nuevo cliente"
-                                style={{
-                                    display: 'flex', alignItems: 'center', gap: 5,
-                                    padding: '0 12px', height: 46, borderRadius: 10,
-                                    border: '1.5px solid #2563EB', backgroundColor: '#EFF6FF',
-                                    color: '#2563EB', cursor: 'pointer', fontSize: 12,
-                                    fontWeight: 700, whiteSpace: 'nowrap',
-                                }}
-                            >
-                                <UserPlus size={14} /> Nuevo
-                            </button>
-                        </div>
-                    </div>
                     {puedeEditarFecha ? (
                         <InputField
                             label="Fecha" name="fecha" value={data.fecha} type="date"
@@ -318,27 +290,54 @@ export default function VentaForm({
                             error={errors.fecha} required
                         />
                     ) : (
-                        <div>
-                            <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 4 }}>
-                                Fecha
+                        <div style={{ marginBottom: 18 }}>
+                            <label style={{ fontSize: 14, fontWeight: 600, color: '#1E293B', display: 'block', marginBottom: 7 }}>
+                                Fecha <span style={{ color: '#EF4444' }}>*</span>
                             </label>
                             <div style={{
-                                padding: '10px 12px', borderRadius: 10,
+                                padding: '11px 14px', borderRadius: 10, height: 46, boxSizing: 'border-box',
                                 border: '1.5px solid #E2E8F0', backgroundColor: '#F8FAFC',
-                                fontSize: 13, color: '#64748B',
+                                fontSize: 15, color: '#64748B', display: 'flex', alignItems: 'center',
                             }}>
                                 {data.fecha}
                             </div>
                         </div>
                     )}
+                    <div style={{ gridColumn: '1 / -1' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
+                            <label style={{ fontSize: 14, fontWeight: 600, color: '#1E293B' }}>Cliente</label>
+                            <button
+                                type="button"
+                                onClick={() => setModalCliente(true)}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: 5,
+                                    padding: '4px 10px', borderRadius: 8,
+                                    border: '1.5px solid #2563EB', backgroundColor: '#EFF6FF',
+                                    color: '#2563EB', cursor: 'pointer', fontSize: 12,
+                                    fontWeight: 700, lineHeight: 1,
+                                }}
+                            >
+                                <UserPlus size={13} /> Nuevo cliente
+                            </button>
+                        </div>
+                        <SearchableSelectField
+                            label=""
+                            name="cliente_id" value={data.cliente_id}
+                            onChange={e => setData('cliente_id', e.target.value)}
+                            options={clientesFiltrados.map(c => ({ value: c.id, label: c.nombre }))}
+                            placeholder="Cliente (opcional)"
+                            searchPlaceholder="Buscar cliente..."
+                        />
+                    </div>
                     {/* Recepción vinculada */}
                     <div style={{ gridColumn: '1 / -1' }}>
-                        <SelectField
+                        <SearchableSelectField
                             label="Vincular a recepción de equipo (opcional)"
                             name="recepcion_id" value={data.recepcion_id}
                             onChange={e => setData('recepcion_id', e.target.value)}
                             options={recepciones.map(r => ({ value: r.id, label: r.label }))}
                             placeholder="Sin recepción vinculada"
+                            searchPlaceholder="Buscar por código o cliente..."
                         />
                         {data.recepcion_id && (
                             <p style={{ fontSize: 11, color: '#16A34A', marginTop: 4, fontWeight: 600 }}>

@@ -108,9 +108,11 @@ export default function SelectField({
 
     return (
         <div style={{ marginBottom: 18 }} ref={ref}>
-            <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#1E293B', marginBottom: 7 }}>
-                {label} {required && <span style={{ color: '#EF4444' }}>*</span>}
-            </label>
+            {label && (
+                <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#1E293B', marginBottom: 7 }}>
+                    {label} {required && <span style={{ color: '#EF4444' }}>*</span>}
+                </label>
+            )}
 
             <button
                 ref={triggerRef}

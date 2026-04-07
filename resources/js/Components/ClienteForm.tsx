@@ -86,34 +86,32 @@ export default function ClienteForm({
             )}
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-                {/* Tipo de documento + número con botón de búsqueda */}
-                <div style={{ gridColumn: '1 / -1' }}>
+                {/* Tipo de documento */}
+                <div>
+                    <SelectField
+                        label="Tipo de documento"
+                        name="tipo_documento"
+                        value={tipoDoc}
+                        onChange={e => {
+                            setData('tipo_documento', e.target.value);
+                            setData('dni', '');
+                            setBloqueados(new Set());
+                            setErrorBusqueda('');
+                            setErrorDoc('');
+                        }}
+                        options={[
+                            { value: 'DNI', label: 'DNI' },
+                            { value: 'RUC', label: 'RUC' },
+                        ]}
+                    />
+                </div>
+
+                {/* Número de documento + botón consultar */}
+                <div>
                     <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#1E293B', marginBottom: 7 }}>
-                        Documento de identidad
+                        Número de documento
                     </label>
                     <div style={{ display: 'flex', gap: 8 }}>
-                        {/* Selector tipo */}
-                        <select
-                            value={tipoDoc}
-                            onChange={e => {
-                                setData('tipo_documento', e.target.value);
-                                setData('dni', '');
-                                setBloqueados(new Set());
-                                setErrorBusqueda('');
-                                setErrorDoc('');
-                            }}
-                            style={{
-                                padding: '11px 10px', fontSize: 14, borderRadius: 10, height: 46,
-                                border: '1.5px solid #E2E8F0', outline: 'none', color: '#1E293B',
-                                backgroundColor: '#F8FAFC', fontWeight: 600, cursor: 'pointer',
-                                flexShrink: 0,
-                            }}
-                        >
-                            <option value="DNI">DNI</option>
-                            <option value="RUC">RUC</option>
-                        </select>
-
-                        {/* Número */}
                         <input
                             type="text"
                             name="dni"
@@ -122,11 +120,7 @@ export default function ClienteForm({
                             placeholder={tipoDoc === 'DNI' ? '8 dígitos' : '11 dígitos'}
                             onChange={e => {
                                 const soloNumeros = e.target.value.replace(/\D/g, '');
-                                if (soloNumeros !== e.target.value) {
-                                    setErrorDoc('Solo se permiten números');
-                                } else {
-                                    setErrorDoc('');
-                                }
+                                setErrorDoc(soloNumeros !== e.target.value ? 'Solo se permiten números' : '');
                                 setData('dni', soloNumeros);
                                 if (bloqueados.size > 0) setBloqueados(new Set());
                                 setErrorBusqueda('');
@@ -137,20 +131,18 @@ export default function ClienteForm({
                                 outline: 'none', color: '#1E293B', height: 46, boxSizing: 'border-box',
                             }}
                         />
-
-                        {/* Botón consultar */}
                         <button
                             type="button"
                             onClick={buscarDocumento}
                             disabled={!puedeConsultar || buscando}
-                            title={!puedeConsultar ? `Ingresa exactamente ${longitudRequerida} dígitos` : `Consultar en ${tipoDoc === 'DNI' ? 'RENIEC' : 'SUNAT'}`}
+                            title={!puedeConsultar ? `Ingresa ${longitudRequerida} dígitos` : `Consultar en ${tipoDoc === 'DNI' ? 'RENIEC' : 'SUNAT'}`}
                             style={{
                                 display: 'flex', alignItems: 'center', gap: 6,
-                                padding: '0 16px', borderRadius: 10, height: 46,
+                                padding: '0 14px', borderRadius: 10, height: 46,
                                 border: 'none', cursor: puedeConsultar && !buscando ? 'pointer' : 'not-allowed',
                                 backgroundColor: puedeConsultar && !buscando ? '#2563EB' : '#CBD5E1',
                                 color: '#fff', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap',
-                                transition: 'background 0.2s',
+                                transition: 'background 0.2s', flexShrink: 0,
                             }}
                         >
                             {buscando
@@ -159,11 +151,9 @@ export default function ClienteForm({
                             }
                         </button>
                     </div>
-
-                    {/* Indicador de progreso */}
                     {data.dni.length > 0 && data.dni.length < longitudRequerida && !errorDoc && (
                         <p style={{ marginTop: 5, fontSize: 12, color: '#64748B' }}>
-                            {data.dni.length}/{longitudRequerida} dígitos ingresados
+                            {data.dni.length}/{longitudRequerida} dígitos
                         </p>
                     )}
                     {errorDoc && <p style={{ marginTop: 5, fontSize: 13, color: '#EF4444' }}>{errorDoc}</p>}
@@ -171,7 +161,7 @@ export default function ClienteForm({
                     {errorBusqueda && <p style={{ marginTop: 5, fontSize: 13, color: '#EF4444' }}>{errorBusqueda}</p>}
                     {bloqueados.size > 0 && (
                         <p style={{ marginTop: 5, fontSize: 12, color: '#16A34A', fontWeight: 600 }}>
-                            ✓ Datos obtenidos de {tipoDoc === 'DNI' ? 'RENIEC' : 'SUNAT'} — campos bloqueados para mantener integridad
+                            ✓ Datos obtenidos de {tipoDoc === 'DNI' ? 'RENIEC' : 'SUNAT'}
                         </p>
                     )}
                 </div>
