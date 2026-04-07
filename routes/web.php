@@ -22,6 +22,8 @@ use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\VentaController;
 use App\Http\Controllers\RecepcionController;
 use App\Http\Controllers\GastoController;
+use App\Http\Controllers\CierreCajaController;
+use App\Http\Controllers\ReporteController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -116,6 +118,25 @@ Route::middleware('auth')->group(function () {
     Route::post  ('/configuracion/cuentas-pago',                   [CuentaPagoController::class, 'store'])->name('config.cuentas-pago.store');
     Route::put   ('/configuracion/cuentas-pago/{cuentaPago}',      [CuentaPagoController::class, 'update'])->name('config.cuentas-pago.update');
     Route::patch ('/configuracion/cuentas-pago/{cuentaPago}/toggle',[CuentaPagoController::class, 'toggleActivo'])->name('config.cuentas-pago.toggle');
+
+    // CIERRE DE CAJA
+    Route::get   ('/cierre-caja',                         [CierreCajaController::class, 'index'])->name('cierre-caja.index');
+    Route::get   ('/cierre-caja/create',                  [CierreCajaController::class, 'create'])->name('cierre-caja.create');
+    Route::post  ('/cierre-caja',                         [CierreCajaController::class, 'store'])->name('cierre-caja.store');
+    Route::get   ('/cierre-caja/{cierreCaja}',            [CierreCajaController::class, 'show'])->name('cierre-caja.show');
+    Route::put   ('/cierre-caja/{cierreCaja}',            [CierreCajaController::class, 'update'])->name('cierre-caja.update');
+    Route::patch ('/cierre-caja/{cierreCaja}/cerrar',     [CierreCajaController::class, 'cerrar'])->name('cierre-caja.cerrar');
+    Route::get   ('/cierre-caja/{cierreCaja}/pdf',        [CierreCajaController::class, 'pdf'])->name('cierre-caja.pdf');
+
+    // REPORTES / KPI
+    Route::get('/reportes',                               [ReporteController::class, 'index'])->name('reportes.index');
+    Route::get('/reportes/ventas-por-fecha',              [ReporteController::class, 'ventasPorFecha'])->name('reportes.ventas-por-fecha');
+    Route::get('/reportes/servicios-top',                 [ReporteController::class, 'serviciosTop'])->name('reportes.servicios-top');
+    Route::get('/reportes/productos-top',                 [ReporteController::class, 'productosTop'])->name('reportes.productos-top');
+    Route::get('/reportes/metodos-pago',                  [ReporteController::class, 'metodosPago'])->name('reportes.metodos-pago');
+    Route::get('/reportes/clientes-top',                  [ReporteController::class, 'clientesTop'])->name('reportes.clientes-top');
+    Route::get('/reportes/tiempo-servicio',               [ReporteController::class, 'tiempoServicio'])->name('reportes.tiempo-servicio');
+    Route::get('/reportes/pdf',                           [ReporteController::class, 'pdf'])->name('reportes.pdf');
 
     // GASTOS
     Route::get   ('/gastos',               [GastoController::class, 'index'])->name('gastos.index');

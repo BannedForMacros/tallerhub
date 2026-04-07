@@ -41,6 +41,17 @@ class User extends Authenticatable
         return $this->rol?->nombre === 'dueño';
     }
 
+    public function esCajera(): bool
+    {
+        return $this->rol?->nombre === \App\Constants\Roles::CAJERA;
+    }
+
+    public function puedeVerEsperados(): bool
+    {
+        return $this->esSuperAdmin() || $this->esDueno()
+            || in_array($this->rol?->nombre, ['admin']);
+    }
+
     // Verifica permiso sobre un módulo por slug
 
 

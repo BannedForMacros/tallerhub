@@ -430,3 +430,71 @@ export interface MetodoPago {
     cuentas_activas?: CuentaPago[];
     empresa?: Empresa;
 }
+
+// ── Cierre de Caja ────────────────────────────────────
+export interface CierreCajaPago {
+    id: number;
+    cierre_id: number;
+    metodo_pago_id: number;
+    cuenta_pago_id: number | null;
+    monto_esperado: number | null;   // null cuando el rol es cajera
+    monto_entregado: number;
+    diferencia: number | null;       // null cuando el rol es cajera
+    metodo_pago?: MetodoPago;
+    cuenta_pago?: CuentaPago | null;
+}
+
+export interface CierreCaja {
+    id: number;
+    empresa_id: number;
+    local_id: number;
+    user_id: number;
+    fecha: string;
+    estado: 'borrador' | 'cerrado';
+    observaciones: string | null;
+    total_esperado: number | null;   // null cuando el rol es cajera
+    total_entregado: number;
+    diferencia: number | null;       // null cuando el rol es cajera
+    servicios_cantidad: number;
+    servicios_total: number;
+    productos_cantidad: number;
+    productos_total: number;
+    descuentos_total: number;
+    ventas_neto: number;
+    cerrado_at: string | null;
+    local?: Local;
+    usuario?: Usuario;
+    pagos?: CierreCajaPago[];
+}
+
+// ── Reportes / KPI ────────────────────────────────────
+export interface ReporteVentaDia {
+    dia: string;
+    total: number;
+    cantidad: number;
+}
+
+export interface ReporteTopItem {
+    nombre: string;
+    cantidad_vendida: number;
+    total_facturado: number;
+}
+
+export interface ReporteMetodoPago {
+    nombre: string;
+    total: number;
+}
+
+export interface ReporteClienteTop {
+    nombre: string;
+    dni: string;
+    num_ventas: number;
+    total_gastado: number;
+}
+
+export interface ReporteTiempoServicio {
+    promedio_horas: number;
+    min_horas: number;
+    max_horas: number;
+    total_casos: number;
+}
