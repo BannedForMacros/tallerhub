@@ -47,7 +47,6 @@ class VentaController extends Controller
 
         // Inventario con precio promedio y stock por local
         $inventario = Inventario::with(['unidadMedida'])
-            ->where('stock', '>', 0)
             ->when($empresaId, fn($q) => $q->where('empresa_id', $empresaId))
             ->get()
             ->map(function ($inv) {

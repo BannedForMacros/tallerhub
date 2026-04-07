@@ -319,7 +319,7 @@ export default function VentaForm({
                     {/* Header */}
                     <div style={{
                         display: 'grid',
-                        gridTemplateColumns: '90px 180px 280px 70px 70px 110px 100px 36px',
+                        gridTemplateColumns: '90px 180px 1fr 70px 70px 110px 100px 36px',
                         gap: 8, padding: '10px 12px',
                         backgroundColor: '#1E293B', borderRadius: '10px 10px 0 0', minWidth: 1000,
                     }}>
@@ -346,7 +346,7 @@ export default function VentaForm({
                             return (
                                 <div key={i} style={{
                                     display: 'grid',
-                                    gridTemplateColumns: '90px 180px 280px 70px 70px 110px 100px 36px',
+                                    gridTemplateColumns: '90px 180px 1fr 70px 70px 110px 100px 36px',
                                     gap: 8, padding: '10px 12px', alignItems: 'start',
                                     backgroundColor: i % 2 === 0 ? '#F8FAFC' : '#fff',
                                     borderBottom: i < data.detalles.length - 1 ? '1px solid #F1F5F9' : 'none',
@@ -447,7 +447,10 @@ export default function VentaForm({
                                         backgroundColor: '#F8FAFC', border: '1.5px solid #E2E8F0',
                                         fontSize: 11, color: '#94A3B8', textAlign: 'right', fontWeight: 500,
                                     }}>
-                                        {esServicio ? '—' : costoRef > 0 ? `S/ ${Number(costoRef).toFixed(2)}` : '—'}
+                                        {esServicio
+                                            ? (d.precio_referencial ? `S/ ${Number(d.precio_referencial).toFixed(2)}` : '—')
+                                            : (costoRef > 0 ? `S/ ${Number(costoRef).toFixed(2)}` : '—')
+                                        }
                                     </div>
 
                                     {/* Precio venta — editable, resaltado */}

@@ -32,7 +32,7 @@ export default function VentasCreate({ empresas, locales, clientes, servicios, p
         descuento:     '0',
         fecha:         new Date().toISOString().split('T')[0],
         detalles:      [detalleVacio('servicio')],
-        pagos:         [] as { metodo_pago_id: string; cuenta_pago_id: string; monto: string }[],
+        pagos:         [{ metodo_pago_id: '1', cuenta_pago_id: '', monto: '' }] as { metodo_pago_id: string; cuenta_pago_id: string; monto: string }[],
     });
 
     const guardar = () => {
