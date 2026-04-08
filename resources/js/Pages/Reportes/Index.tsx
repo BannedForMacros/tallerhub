@@ -182,9 +182,9 @@ export default function ReportesIndex({
                                 </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
-                            <XAxis dataKey="dia" tick={{ fontSize: 11 }} tickFormatter={d => d.slice(5)} />
-                            <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `S/${v}`} />
-                            <Tooltip formatter={(v: number) => fmt(v)} labelFormatter={l => `Fecha: ${l}`} />
+                            <XAxis dataKey="dia" tick={{ fontSize: 11 }} tickFormatter={(d: string) => d.slice(5)} />
+                            <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => `S/${v}`} />
+                            <Tooltip formatter={(v: number) => fmt(v)} labelFormatter={(l: string) => `Fecha: ${l}`} />
                             <Area type="monotone" dataKey="total" name="Total" stroke="#2563EB" fill="url(#colorTotal)" strokeWidth={2} />
                         </AreaChart>
                     </ResponsiveContainer>
@@ -199,7 +199,7 @@ export default function ReportesIndex({
                         <ResponsiveContainer width="100%" height={240}>
                             <BarChart layout="vertical" data={serviciosTop} margin={{ top: 0, right: 20, left: 80, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" horizontal={false} />
-                                <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={v => `S/${v}`} />
+                                <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v: number) => `S/${v}`} />
                                 <YAxis type="category" dataKey="nombre" tick={{ fontSize: 11 }} width={80} />
                                 <Tooltip formatter={(v: number) => fmt(v)} />
                                 <Bar dataKey="total_facturado" name="Total" fill="#2563EB" radius={[0, 4, 4, 0]} />
@@ -213,7 +213,7 @@ export default function ReportesIndex({
                         <ResponsiveContainer width="100%" height={240}>
                             <BarChart layout="vertical" data={productosTop} margin={{ top: 0, right: 20, left: 80, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" horizontal={false} />
-                                <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={v => `S/${v}`} />
+                                <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v: number) => `S/${v}`} />
                                 <YAxis type="category" dataKey="nombre" tick={{ fontSize: 11 }} width={80} />
                                 <Tooltip formatter={(v: number) => fmt(v)} />
                                 <Bar dataKey="total_facturado" name="Total" fill="#D97706" radius={[0, 4, 4, 0]} />
@@ -230,7 +230,7 @@ export default function ReportesIndex({
                     {metodosPago.length === 0 ? <EmptyChart /> : (
                         <ResponsiveContainer width="100%" height={240}>
                             <PieChart>
-                                <Pie data={metodosPago} dataKey="total" nameKey="nombre" cx="50%" cy="50%" outerRadius={90} label={({ nombre, percent }) => `${nombre} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                                <Pie data={metodosPago} dataKey="total" nameKey="nombre" cx="50%" cy="50%" outerRadius={90} label={({ nombre, percent }: { nombre: string; percent: number }) => `${nombre} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
                                     {metodosPago.map((_, idx) => (
                                         <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
                                     ))}
@@ -246,7 +246,7 @@ export default function ReportesIndex({
                         <ResponsiveContainer width="100%" height={240}>
                             <BarChart layout="vertical" data={clientesTop} margin={{ top: 0, right: 20, left: 100, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" horizontal={false} />
-                                <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={v => `S/${v}`} />
+                                <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v: number) => `S/${v}`} />
                                 <YAxis type="category" dataKey="nombre" tick={{ fontSize: 11 }} width={100} />
                                 <Tooltip formatter={(v: number) => fmt(v)} />
                                 <Bar dataKey="total_gastado" name="Total gastado" fill="#7C3AED" radius={[0, 4, 4, 0]} />

@@ -86,13 +86,17 @@ class VentaController extends Controller
         $user      = auth()->user();
         $empresaId = $user->esSuperAdmin() ? null : $user->empresa_id;
 
+        $puedeVerEsperados = $user->puedeVerEsperados();
+
         $ventas = Venta::with(['cliente', 'local', 'usuario', 'recepcion', 'detalles', 'pagos.metodoPago', 'pagos.cuentaPago'])
             ->when($empresaId, fn($q) => $q->where('empresa_id', $empresaId))
+            ->when(!$puedeVerEsperados, fn($q) => $q->whereDate('fecha', today()))
             ->orderByDesc('id')
             ->get();
 
         return Inertia::render('Ventas/Index', [
-            'ventas' => $ventas,
+            'ventas'            => $ventas,
+            'puedeVerEsperados' => $puedeVerEsperados,
         ]);
     }
 

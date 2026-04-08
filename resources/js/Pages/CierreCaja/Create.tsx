@@ -12,10 +12,13 @@ interface Props extends PageProps {
 export default function CierreCajaCreate({ locales, empresas, auth }: Props) {
     const esSuperAdmin = auth.user.esSuperAdmin;
 
+    const params = new URLSearchParams(window.location.search);
+    const fechaParam = params.get('fecha') ?? new Date().toISOString().split('T')[0];
+
     const { data, setData, post, processing, errors } = useForm({
         empresa_id:    auth.user.empresa_id?.toString() ?? '',
         local_id:      '',
-        fecha:         new Date().toISOString().split('T')[0],
+        fecha:         fechaParam,
         observaciones: '',
     });
 

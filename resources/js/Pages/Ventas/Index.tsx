@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { router } from '@inertiajs/react';
 import { toast, Toaster } from 'react-hot-toast';
-import { Plus, Eye, Trash2, Pencil } from 'lucide-react';
+import { Plus, Eye, Trash2, Pencil, CreditCard } from 'lucide-react';
 import { Head, Link } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Table from '@/Components/Table';
@@ -13,6 +13,7 @@ import { PageProps, Venta } from '@/types';
 
 interface Props extends PageProps {
     ventas: Venta[];
+    puedeVerEsperados: boolean;
 }
 
 const ESTADO_COLORS: Record<string, 'success' | 'warning' | 'danger'> = {
@@ -27,8 +28,16 @@ const ESTADO_LABELS: Record<string, string> = {
     anulado:   'Anulado',
 };
 
-export default function VentasIndex({ ventas }: Props) {
+const hoy = new Date().toISOString().split('T')[0];
+
+export default function VentasIndex({ ventas, puedeVerEsperados }: Props) {
     const [modalVer, setModalVer] = useState<Venta | null>(null);
+    const [fechaFiltro, setFechaFiltro] = useState<string>(hoy);
+
+    // Admin/dueño filtra client-side; otros roles solo ven hoy (ya filtrado en servidor)
+    const ventasFiltradas = puedeVerEsperados
+        ? ventas.filter(v => v.fecha?.slice(0, 10) === fechaFiltro)
+        : ventas;
 
     const confirmarAnular = (v: Venta) => {
         toast((t) => (
@@ -134,19 +143,41 @@ export default function VentasIndex({ ventas }: Props) {
             <Head title="Ventas" />
             <Toaster position="top-right" />
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
                 <div>
                     <h1 style={{ fontSize: 22, fontWeight: 800, color: '#1E293B', margin: 0 }}>Ventas</h1>
                     <p style={{ fontSize: 14, color: '#94A3B8', marginTop: 4 }}>
-                        Registro de ventas de servicios y productos
+                        {puedeVerEsperados ? 'Registro de ventas — filtra por fecha' : 'Ventas del día de hoy'}
                     </p>
                 </div>
-                <Link href={route('ventas.create')}>
-                    <Button variant="primary" size="md" icon={<Plus size={16} />}>Nueva Venta</Button>
-                </Link>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                    {/* Filtro por fecha — solo admin/dueño */}
+                    {puedeVerEsperados && (
+                        <>
+                            <input
+                                type="date"
+                                value={fechaFiltro}
+                                onChange={e => setFechaFiltro(e.target.value)}
+                                style={{
+                                    border: '1px solid #E2E8F0', borderRadius: 8,
+                                    padding: '8px 12px', fontSize: 13, color: '#1E293B',
+                                    backgroundColor: '#fff', outline: 'none',
+                                }}
+                            />
+                            <Link href={route('cierre-caja.create') + `?fecha=${fechaFiltro}`}>
+                                <Button variant="cancel" size="md" icon={<CreditCard size={15} />}>
+                                    Cierre de caja
+                                </Button>
+                            </Link>
+                        </>
+                    )}
+                    <Link href={route('ventas.create')}>
+                        <Button variant="primary" size="md" icon={<Plus size={16} />}>Nueva Venta</Button>
+                    </Link>
+                </div>
             </div>
 
-            <Table columns={columns} data={ventas} emptyText="No hay ventas registradas" />
+            <Table columns={columns} data={ventasFiltradas} emptyText="No hay ventas para esta fecha" />
 
             {/* Modal Ver Detalle */}
             {modalVer && (
@@ -220,6 +251,20 @@ export default function VentasIndex({ ventas }: Props) {
                             <p style={{ marginTop: 12, fontSize: 13, color: '#64748B' }}>
                                 <strong>Obs:</strong> {modalVer.observaciones}
                             </p>
+                        )}
+
+                        {/* Pagos */}
+                        {modalVer.pagos && modalVer.pagos.length > 0 && (
+                            <div style={{ marginTop: 12 }}>
+                                <p style={{ fontSize: 11, color: '#94A3B8', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>Pagos</p>
+                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                    {modalVer.pagos.map((p, i) => (
+                                        <span key={i} style={{ backgroundColor: '#F1F5F9', borderRadius: 8, padding: '4px 10px', fontSize: 12, color: '#475569', fontWeight: 600 }}>
+                                            {p.metodo_pago?.nombre ?? '—'}{p.cuenta_pago ? ` (${p.cuenta_pago.nombre})` : ''}: S/ {Number(p.monto).toFixed(2)}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
                         )}
 
                         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>

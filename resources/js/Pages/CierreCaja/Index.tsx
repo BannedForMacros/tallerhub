@@ -125,7 +125,7 @@ export default function CierreCajaIndex({ cierres, puedeVerEsperados }: Props) {
 
             <Table
                 columns={columns}
-                data={cierres as unknown as Record<string, unknown>[]}
+                data={cierres}
                 emptyText="No hay cierres de caja registrados"
             />
         </AuthenticatedLayout>
