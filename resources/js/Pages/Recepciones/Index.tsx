@@ -1,3 +1,4 @@
+import { formatFecha } from '@/helpers/fecha';
 import { useState, useMemo } from 'react';
 import { useForm, usePage, router } from '@inertiajs/react';
 import { toast, Toaster } from 'react-hot-toast';
@@ -210,7 +211,7 @@ export default function RecepcionesIndex({ recepciones, empresas, clientes, loca
             key: 'fecha_recepcion', label: 'Fecha', width: '10%',
             render: (r: Recepcion) => (
                 <span style={{ fontSize: 12, color: '#64748B' }}>
-                    {new Date(r.fecha_recepcion).toLocaleDateString('es-PE')}
+                    {formatFecha(r.fecha_recepcion)}
                 </span>
             ),
         },

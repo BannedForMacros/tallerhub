@@ -4,6 +4,7 @@ import { Head } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import VentaForm, { detalleVacio } from './VentaForm';
 import { PageProps, ProductoAlmacen, Local, Empresa, Cliente, Servicio, Inventario, MetodoPago } from '@/types';
+import { fechaHoy } from '@/helpers/fecha';
 
 interface RecepcionOpcion { id: number; codigo: string; label: string; }
 
@@ -30,7 +31,7 @@ export default function VentasCreate({ empresas, locales, clientes, servicios, p
         recepcion_id:  '',
         observaciones: '',
         descuento:     '0',
-        fecha:         new Date().toISOString().split('T')[0],
+        fecha:         fechaHoy(),
         detalles:      [detalleVacio('servicio')],
         pagos:         [{ metodo_pago_id: '1', cuenta_pago_id: '', monto: '' }] as { metodo_pago_id: string; cuenta_pago_id: string; monto: string }[],
     });

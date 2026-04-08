@@ -1,3 +1,4 @@
+import { formatFecha } from '@/helpers/fecha';
 import { useState } from 'react';
 import { router } from '@inertiajs/react';
 import { toast, Toaster } from 'react-hot-toast';
@@ -39,7 +40,7 @@ export default function GastosIndex({ gastos }: Props) {
     const columns = [
         {
             key: 'fecha', label: 'Fecha', width: '9%',
-            render: (r: any) => <span style={{ fontSize: 12, color: '#64748B' }}>{new Date(r.fecha).toLocaleDateString('es-PE')}</span>,
+            render: (r: any) => <span style={{ fontSize: 12, color: '#64748B' }}>{formatFecha(r.fecha)}</span>,
         },
         {
             key: 'local', label: 'Local', width: '12%',
@@ -125,7 +126,7 @@ export default function GastosIndex({ gastos }: Props) {
                 <Modal show={!!modalVer} onClose={() => setModalVer(null)} title="Detalle del Gasto" maxWidth="sm">
                     <div>
                         {[
-                            ['Fecha',          new Date(modalVer.fecha).toLocaleDateString('es-PE')],
+                            ['Fecha',          formatFecha(modalVer.fecha)],
                             ['Local',          modalVer.local?.nombre ?? '—'],
                             ['Categoría',      modalVer.descripcion_gasto?.clasificacion?.tipo?.nombre ?? '—'],
                             ['Clasificación',  modalVer.descripcion_gasto?.clasificacion?.nombre ?? '—'],

@@ -32,7 +32,8 @@ interface GastoItem {
     cuenta_pago_id:       string;
 }
 
-const hoy = () => new Date().toISOString().split('T')[0];
+import { fechaHoy } from '@/helpers/fecha';
+const hoy = fechaHoy;
 
 const gastoVacio = (): GastoItem => ({
     _id:                  Date.now() + Math.random(),

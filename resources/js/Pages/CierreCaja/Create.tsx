@@ -3,6 +3,7 @@ import { router, useForm, Head } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Button from '@/Components/Button';
 import { PageProps, Local, Empresa } from '@/types';
+import { fechaHoy } from '@/helpers/fecha';
 
 interface Props extends PageProps {
     locales: Local[];
@@ -13,7 +14,7 @@ export default function CierreCajaCreate({ locales, empresas, auth }: Props) {
     const esSuperAdmin = auth.user.esSuperAdmin;
 
     const params = new URLSearchParams(window.location.search);
-    const fechaParam = params.get('fecha') ?? new Date().toISOString().split('T')[0];
+    const fechaParam = params.get('fecha') ?? fechaHoy();
 
     const { data, setData, post, processing, errors } = useForm({
         empresa_id:    auth.user.empresa_id?.toString() ?? '',

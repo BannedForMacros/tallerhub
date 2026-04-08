@@ -10,6 +10,7 @@ import Badge from '@/Components/Badge';
 import Button from '@/Components/Button';
 import ActionButton from '@/Components/ActionButton';
 import { PageProps, Venta } from '@/types';
+import { fechaHoy, formatFecha } from '@/helpers/fecha';
 
 interface Props extends PageProps {
     ventas: Venta[];
@@ -28,7 +29,7 @@ const ESTADO_LABELS: Record<string, string> = {
     anulado:   'Anulado',
 };
 
-const hoy = new Date().toISOString().split('T')[0];
+const hoy = fechaHoy();
 
 export default function VentasIndex({ ventas, puedeVerEsperados }: Props) {
     const [modalVer, setModalVer] = useState<Venta | null>(null);
@@ -110,7 +111,7 @@ export default function VentasIndex({ ventas, puedeVerEsperados }: Props) {
             key: 'fecha', label: 'Fecha', width: '10%',
             render: (r: Venta) => (
                 <span style={{ fontSize: 12, color: '#64748B' }}>
-                    {new Date(r.fecha).toLocaleDateString('es-PE')}
+                    {formatFecha(r.fecha)}
                 </span>
             ),
         },
@@ -188,7 +189,7 @@ export default function VentasIndex({ ventas, puedeVerEsperados }: Props) {
                                 ['Cliente',        modalVer.cliente?.nombre ?? '—'],
                                 ['Local',          modalVer.local?.nombre ?? '—'],
                                 ['Recepción',      modalVer.recepcion?.codigo ?? '—'],
-                                ['Fecha',          new Date(modalVer.fecha).toLocaleDateString('es-PE')],
+                                ['Fecha',          formatFecha(modalVer.fecha)],
                                 ['Estado',         ESTADO_LABELS[modalVer.estado] ?? modalVer.estado],
                                 ['Registrado por', modalVer.usuario?.name ?? '—'],
                             ].map(([label, val]) => (

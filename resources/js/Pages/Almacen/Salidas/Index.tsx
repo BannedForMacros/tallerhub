@@ -1,3 +1,4 @@
+import { formatFecha } from '@/helpers/fecha';
 import { useState } from 'react';
 import { router } from '@inertiajs/react';
 import { toast, Toaster } from 'react-hot-toast';
@@ -93,7 +94,7 @@ export default function SalidasIndex({ salidas }: Props) {
             key: 'fecha', label: 'Fecha', width: '11%',
             render: (r: SalidaAlmacen) => (
                 <span style={{ fontSize: 12, color: '#64748B' }}>
-                    {new Date(r.fecha).toLocaleDateString('es-PE')}
+                    {formatFecha(r.fecha)}
                 </span>
             ),
         },
@@ -146,7 +147,7 @@ export default function SalidasIndex({ salidas }: Props) {
                             {[
                                 ['Local',          modalVer.local?.nombre ?? '—'],
                                 ['Motivo',         MOTIVOS[modalVer.tipo] ?? modalVer.tipo],
-                                ['Fecha',          new Date(modalVer.fecha).toLocaleDateString('es-PE')],
+                                ['Fecha',          formatFecha(modalVer.fecha)],
                                 ['Registrado por', modalVer.usuario?.name ?? '—'],
                                 ['Estado',         modalVer.activo ? 'Activo' : 'Anulado'],
                                 ['Total',          `S/ ${Number(modalVer.total).toFixed(2)}`],

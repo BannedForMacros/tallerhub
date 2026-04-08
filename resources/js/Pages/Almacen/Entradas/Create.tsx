@@ -2,6 +2,7 @@ import { useForm, usePage } from '@inertiajs/react';
 import { toast, Toaster } from 'react-hot-toast';
 import { Head } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { fechaHoy } from '@/helpers/fecha';
 import EntradaForm, { detalleVacio } from './EntradaForm';
 import { PageProps, ProductoAlmacen, Proveedor, Local, Empresa } from '@/types';
 
@@ -21,7 +22,7 @@ export default function EntradasCreate({ empresas, locales, productos, proveedor
         local_id:      '',
         motivo:        'Compra',
         observaciones: '',
-        fecha:         new Date().toISOString().split('T')[0],
+        fecha:         fechaHoy(),
         detalles:      [detalleVacio()],
     });
 
