@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { router, Head } from '@inertiajs/react';
 import { toast, Toaster } from 'react-hot-toast';
 import { ChevronDown, ChevronUp, FileText, Lock, Save } from 'lucide-react';
+import { formatFecha, parseFechaLocal } from '@/helpers/fecha';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Badge from '@/Components/Badge';
 import Button from '@/Components/Button';
@@ -67,7 +68,7 @@ export default function CierreCajaShow({ cierre, pagos, ventas, puedeVerEsperado
     };
 
     const totalEntregado = pagos.reduce((sum, p) => sum + (parseFloat(montos[p.id] || '0') || 0), 0);
-    const fechaStr = new Date(cierre.fecha + 'T00:00:00').toLocaleDateString('es-PE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const fechaStr = parseFechaLocal(cierre.fecha).toLocaleDateString('es-PE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
     return (
         <AuthenticatedLayout>

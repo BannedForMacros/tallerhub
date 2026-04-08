@@ -1,5 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import { Plus, Eye, FileText } from 'lucide-react';
+import { formatFecha } from '@/helpers/fecha';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Table from '@/Components/Table';
 import Badge from '@/Components/Badge';
@@ -32,7 +33,7 @@ export default function CierreCajaIndex({ cierres, puedeVerEsperados }: Props) {
             key: 'fecha', label: 'Fecha', width: '12%',
             render: (r: CierreCaja) => (
                 <span style={{ fontWeight: 700, color: '#1E293B', fontSize: 13 }}>
-                    {new Date(r.fecha + 'T00:00:00').toLocaleDateString('es-PE')}
+                    {formatFecha(r.fecha)}
                 </span>
             ),
         },
