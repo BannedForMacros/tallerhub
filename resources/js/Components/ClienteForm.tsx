@@ -52,7 +52,7 @@ export default function ClienteForm({
             }
 
             const campos = new Set<string>();
-            setData('nombre', json.nombre ?? '');
+            setData('nombre', (json.nombre ?? '').toUpperCase());
             campos.add('nombre');
 
             if (json.direccion) {
@@ -85,12 +85,14 @@ export default function ClienteForm({
                 />
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-                {/* Tipo de documento */}
-                <div>
-                    <SelectField
-                        label="Tipo de documento"
-                        name="tipo_documento"
+            {/* Documento: tipo + número + botón en una sola fila alineada */}
+            <div style={{ marginBottom: 18 }}>
+                <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#1E293B', marginBottom: 7 }}>
+                    Documento de identidad <span style={{ color: '#94A3B8', fontWeight: 400, fontSize: 13 }}>(opcional)</span>
+                </label>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+                    {/* Tipo de documento - select compacto inline */}
+                    <select
                         value={tipoDoc}
                         onChange={e => {
                             setData('tipo_documento', e.target.value);
@@ -99,84 +101,100 @@ export default function ClienteForm({
                             setErrorBusqueda('');
                             setErrorDoc('');
                         }}
-                        options={[
-                            { value: 'DNI', label: 'DNI' },
-                            { value: 'RUC', label: 'RUC' },
-                        ]}
+                        style={{
+                            padding: '0 10px', fontSize: 14, borderRadius: 10,
+                            border: '1.5px solid #E2E8F0', backgroundColor: '#F8FAFC',
+                            color: '#1E293B', fontWeight: 600, height: 46,
+                            outline: 'none', cursor: 'pointer', flexShrink: 0,
+                            width: 82, appearance: 'none', textAlign: 'center',
+                        }}
+                    >
+                        <option value="DNI">DNI</option>
+                        <option value="RUC">RUC</option>
+                    </select>
+
+                    {/* Número de documento */}
+                    <input
+                        type="text"
+                        name="dni"
+                        value={data.dni}
+                        maxLength={longitudRequerida}
+                        placeholder={tipoDoc === 'DNI' ? 'Ej. 12345678' : 'Ej. 20123456789'}
+                        onChange={e => {
+                            const soloNumeros = e.target.value.replace(/\D/g, '');
+                            setErrorDoc(soloNumeros !== e.target.value ? 'Solo se permiten números' : '');
+                            setData('dni', soloNumeros);
+                            if (bloqueados.size > 0) setBloqueados(new Set());
+                            setErrorBusqueda('');
+                        }}
+                        onFocus={e => {
+                            e.target.style.borderColor = '#2563EB';
+                            e.target.style.boxShadow = '0 0 0 4px rgba(37,99,235,0.08)';
+                        }}
+                        onBlur={e => {
+                            e.target.style.borderColor = (errors.dni || errorDoc) ? '#EF4444' : '#E2E8F0';
+                            e.target.style.boxShadow = 'none';
+                        }}
+                        style={{
+                            flex: 1, padding: '11px 14px', fontSize: 15, borderRadius: 10,
+                            border: `1.5px solid ${(errors.dni || errorDoc) ? '#EF4444' : '#E2E8F0'}`,
+                            outline: 'none', color: '#1E293B', height: 46,
+                            boxSizing: 'border-box', transition: 'all 0.2s',
+                        }}
                     />
+
+                    {/* Botón consultar */}
+                    <button
+                        type="button"
+                        onClick={buscarDocumento}
+                        disabled={!puedeConsultar || buscando}
+                        title={!puedeConsultar
+                            ? `Ingresa ${longitudRequerida} dígitos para consultar`
+                            : `Consultar en ${tipoDoc === 'DNI' ? 'RENIEC' : 'SUNAT'}`
+                        }
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            padding: '0 16px', borderRadius: 10, height: 46,
+                            border: 'none', cursor: puedeConsultar && !buscando ? 'pointer' : 'not-allowed',
+                            backgroundColor: puedeConsultar && !buscando ? '#2563EB' : '#CBD5E1',
+                            color: '#fff', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap',
+                            transition: 'background 0.2s', flexShrink: 0,
+                        }}
+                    >
+                        {buscando
+                            ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Buscando...</>
+                            : <><Search size={14} /> Consultar</>
+                        }
+                    </button>
                 </div>
 
-                {/* Número de documento + botón consultar */}
-                <div>
-                    <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#1E293B', marginBottom: 7 }}>
-                        Número de documento
-                    </label>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                        <input
-                            type="text"
-                            name="dni"
-                            value={data.dni}
-                            maxLength={longitudRequerida}
-                            placeholder={tipoDoc === 'DNI' ? '8 dígitos' : '11 dígitos'}
-                            onChange={e => {
-                                const soloNumeros = e.target.value.replace(/\D/g, '');
-                                setErrorDoc(soloNumeros !== e.target.value ? 'Solo se permiten números' : '');
-                                setData('dni', soloNumeros);
-                                if (bloqueados.size > 0) setBloqueados(new Set());
-                                setErrorBusqueda('');
-                            }}
-                            style={{
-                                flex: 1, padding: '11px 14px', fontSize: 15, borderRadius: 10,
-                                border: `1.5px solid ${(errors.dni || errorDoc) ? '#EF4444' : '#E2E8F0'}`,
-                                outline: 'none', color: '#1E293B', height: 46, boxSizing: 'border-box',
-                            }}
-                        />
-                        <button
-                            type="button"
-                            onClick={buscarDocumento}
-                            disabled={!puedeConsultar || buscando}
-                            title={!puedeConsultar ? `Ingresa ${longitudRequerida} dígitos` : `Consultar en ${tipoDoc === 'DNI' ? 'RENIEC' : 'SUNAT'}`}
-                            style={{
-                                display: 'flex', alignItems: 'center', gap: 6,
-                                padding: '0 14px', borderRadius: 10, height: 46,
-                                border: 'none', cursor: puedeConsultar && !buscando ? 'pointer' : 'not-allowed',
-                                backgroundColor: puedeConsultar && !buscando ? '#2563EB' : '#CBD5E1',
-                                color: '#fff', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap',
-                                transition: 'background 0.2s', flexShrink: 0,
-                            }}
-                        >
-                            {buscando
-                                ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Buscando...</>
-                                : <><Search size={14} /> Consultar</>
-                            }
-                        </button>
-                    </div>
-                    {data.dni.length > 0 && data.dni.length < longitudRequerida && !errorDoc && (
-                        <p style={{ marginTop: 5, fontSize: 12, color: '#64748B' }}>
-                            {data.dni.length}/{longitudRequerida} dígitos
-                        </p>
-                    )}
-                    {errorDoc && <p style={{ marginTop: 5, fontSize: 13, color: '#EF4444' }}>{errorDoc}</p>}
-                    {errors.dni && <p style={{ marginTop: 5, fontSize: 13, color: '#EF4444' }}>{errors.dni}</p>}
-                    {errorBusqueda && <p style={{ marginTop: 5, fontSize: 13, color: '#EF4444' }}>{errorBusqueda}</p>}
-                    {bloqueados.size > 0 && (
-                        <p style={{ marginTop: 5, fontSize: 12, color: '#16A34A', fontWeight: 600 }}>
-                            ✓ Datos obtenidos de {tipoDoc === 'DNI' ? 'RENIEC' : 'SUNAT'}
-                        </p>
-                    )}
-                </div>
+                {/* Hints y mensajes */}
+                {data.dni.length > 0 && data.dni.length < longitudRequerida && !errorDoc && (
+                    <p style={{ marginTop: 5, fontSize: 12, color: '#64748B' }}>
+                        {data.dni.length}/{longitudRequerida} dígitos
+                    </p>
+                )}
+                {errorDoc && <p style={{ marginTop: 5, fontSize: 13, color: '#EF4444' }}>{errorDoc}</p>}
+                {errors.dni && <p style={{ marginTop: 5, fontSize: 13, color: '#EF4444' }}>{errors.dni}</p>}
+                {errorBusqueda && <p style={{ marginTop: 5, fontSize: 13, color: '#EF4444' }}>{errorBusqueda}</p>}
+                {bloqueados.size > 0 && (
+                    <p style={{ marginTop: 5, fontSize: 12, color: '#16A34A', fontWeight: 600 }}>
+                        ✓ Datos obtenidos de {tipoDoc === 'DNI' ? 'RENIEC' : 'SUNAT'}
+                    </p>
+                )}
+            </div>
 
-                {/* Nombre */}
-                <div style={{ gridColumn: '1 / -1' }}>
-                    <InputField
-                        label="Nombre completo / Razón social" name="nombre" value={data.nombre}
-                        onChange={e => setData('nombre', e.target.value)}
-                        error={errors.nombre} required
-                        placeholder="Ej. Juan Pérez García"
-                        disabled={bloqueados.has('nombre')}
-                    />
-                </div>
+            {/* Nombre completo - siempre en mayúsculas */}
+            <InputField
+                label="Nombre completo / Razón social" name="nombre" value={data.nombre}
+                onChange={e => setData('nombre', e.target.value.toUpperCase())}
+                error={errors.nombre} required
+                placeholder="Ej. JUAN PÉREZ GARCÍA"
+                disabled={bloqueados.has('nombre')}
+            />
 
+            {/* Teléfono y Email en dos columnas */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
                 <InputField
                     label="Teléfono" name="telefono" value={data.telefono}
                     onChange={e => setData('telefono', e.target.value)}
@@ -187,17 +205,16 @@ export default function ClienteForm({
                     onChange={e => setData('email', e.target.value)}
                     error={errors.email} placeholder="correo@ejemplo.com"
                 />
-
-                <div style={{ gridColumn: '1 / -1' }}>
-                    <InputField
-                        label="Dirección" name="direccion" value={data.direccion}
-                        onChange={e => setData('direccion', e.target.value)}
-                        error={errors.direccion}
-                        placeholder="Av. Principal 123, Lima"
-                        disabled={bloqueados.has('direccion')}
-                    />
-                </div>
             </div>
+
+            {/* Dirección */}
+            <InputField
+                label="Dirección" name="direccion" value={data.direccion}
+                onChange={e => setData('direccion', e.target.value)}
+                error={errors.direccion}
+                placeholder="Av. Principal 123, Lima"
+                disabled={bloqueados.has('direccion')}
+            />
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
                 <Button variant="cancel" size="md" onClick={onCancelar}>Cancelar</Button>

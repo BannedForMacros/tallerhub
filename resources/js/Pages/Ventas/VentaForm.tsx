@@ -760,7 +760,7 @@ export default function VentaForm({
             </div>
 
             {/* Modal nuevo cliente */}
-            <Modal show={modalCliente} onClose={() => setModalCliente(false)} title="Nuevo Cliente" maxWidth="md">
+            <Modal show={modalCliente} onClose={() => setModalCliente(false)} title="Nuevo Cliente" maxWidth="xl">
                 <ClienteForm
                     form={{
                         data: nuevoClienteData as any,

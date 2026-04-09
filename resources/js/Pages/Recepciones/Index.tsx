@@ -431,7 +431,7 @@ export default function RecepcionesIndex({ recepciones, empresas, clientes, loca
                 show={modalCliente}
                 onClose={() => setModalCliente(false)}
                 title="Nuevo Cliente"
-                maxWidth="md"
+                maxWidth="xl"
             >
                 <ClienteForm
                     form={formCliente}

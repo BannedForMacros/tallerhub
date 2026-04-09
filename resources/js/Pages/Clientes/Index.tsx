@@ -157,7 +157,7 @@ export default function ClientesIndex({ clientes, empresas }: Props) {
                 show={modal}
                 onClose={() => setModal(false)}
                 title={editando ? 'Editar Cliente' : 'Nuevo Cliente'}
-                maxWidth="md"
+                maxWidth="xl"
             >
                 <ClienteForm
                     form={form}
