@@ -104,7 +104,10 @@ export default function VentaForm({
                     'X-Requested-With': 'XMLHttpRequest',
                     ...(csrfMeta ? { 'X-CSRF-TOKEN': csrfMeta.content } : {}),
                 },
-                body: JSON.stringify(nuevoClienteData),
+                body: JSON.stringify({
+                    ...nuevoClienteData,
+                    empresa_id: nuevoClienteData.empresa_id || null,
+                }),
             });
             const json = await res.json();
             if (!res.ok) {

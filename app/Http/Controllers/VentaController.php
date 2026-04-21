@@ -16,6 +16,7 @@ use App\Models\Cliente;
 use App\Models\MetodoPago;
 use App\Models\Correlativo;
 use App\Helpers\FechaHelper;
+use App\Helpers\InventarioHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -139,28 +140,8 @@ class VentaController extends Controller
             : $user->empresa_id;
 
         DB::transaction(function () use ($data, $empresaId, $user) {
-            // Verificar stock para productos
-            foreach ($data['detalles'] as $detalle) {
-                if ($detalle['tipo'] === 'producto' && !empty($detalle['producto_id'])) {
-                    $inv = Inventario::where('empresa_id',      $empresaId)
-                        ->where('local_id',        $data['local_id'])
-                        ->where('producto_id',      $detalle['producto_id'])
-                        ->where('unidad_medida_id', $detalle['unidad_medida_id'])
-                        ->first();
-
-                    $stockDisponible = $inv ? (float) $inv->stock : 0;
-
-                    if ((float) $detalle['cantidad'] > $stockDisponible) {
-                        $producto = ProductoAlmacen::find($detalle['producto_id']);
-                        throw new \Exception("Stock insuficiente para '{$producto->nombre}'. Disponible: {$stockDisponible}");
-                    }
-                }
-            }
-
             // Calcular totales
-            $subtotal = collect($data['detalles'])->sum(fn($d) =>
-                (float) $d['cantidad'] * (float) $d['precio_unitario']
-            );
+            $subtotal  = collect($data['detalles'])->sum(fn($d) => (float)$d['cantidad'] * (float)$d['precio_unitario']);
             $descuento = (float) ($data['descuento'] ?? 0);
             $total     = $subtotal - $descuento;
 
@@ -190,66 +171,15 @@ class VentaController extends Controller
                 ]);
             }
 
-            // Crear salida de inventario para productos
-            $productosParaSalida = collect($data['detalles'])
-                ->filter(fn($d) => $d['tipo'] === 'producto' && !empty($d['producto_id']));
-
-            if ($productosParaSalida->isNotEmpty()) {
-                $salida = SalidaAlmacen::create([
-                    'codigo'          => Correlativo::siguiente($empresaId, 'SAL'),
-                    'empresa_id'      => $empresaId,
-                    'local_id'        => $data['local_id'],
-                    'user_id'         => $user->id,
-                    'tipo'            => 'venta',
-                    'motivo'          => 'Venta',
-                    'referencia_id'   => $venta->id,
-                    'referencia_tipo' => 'venta',
-                    'total'           => 0,
-                    'fecha'           => $data['fecha'],
-                ]);
-
-                $totalSalida = 0;
-
-                foreach ($productosParaSalida as $detalle) {
-                    $precioPromedio = (float) \App\Models\EntradaAlmacenDetalle::where('producto_id',      $detalle['producto_id'])
-                        ->where('unidad_medida_id', $detalle['unidad_medida_id'])
-                        ->whereHas('entrada', fn($q) => $q->where('local_id', $data['local_id'])->where('activo', 1))
-                        ->avg('precio_unitario') ?? 0;
-
-                    $subtotalSalida = (float) $detalle['cantidad'] * $precioPromedio;
-                    $totalSalida += $subtotalSalida;
-
-                    SalidaAlmacenDetalle::create([
-                        'salida_id'        => $salida->id,
-                        'producto_id'      => $detalle['producto_id'],
-                        'unidad_medida_id' => $detalle['unidad_medida_id'],
-                        'cantidad'         => $detalle['cantidad'],
-                        'precio_unitario'  => $precioPromedio,
-                        'tipo_precio'      => 'costo',
-                        'subtotal'         => $subtotalSalida,
-                    ]);
-
-                    // Descontar stock
-                    Inventario::where('empresa_id',      $empresaId)
-                        ->where('local_id',        $data['local_id'])
-                        ->where('producto_id',      $detalle['producto_id'])
-                        ->where('unidad_medida_id', $detalle['unidad_medida_id'])
-                        ->decrement('stock', $detalle['cantidad']);
-                }
-
-                $salida->update(['total' => $totalSalida]);
-            }
-
             // Crear detalles de venta
             foreach ($data['detalles'] as $detalle) {
                 $precioCostoRef = 0;
                 if ($detalle['tipo'] === 'producto' && !empty($detalle['producto_id'])) {
-                    $precioCostoRef = (float) \App\Models\EntradaAlmacenDetalle::where('producto_id',      $detalle['producto_id'])
+                    $precioCostoRef = (float) \App\Models\EntradaAlmacenDetalle::where('producto_id', $detalle['producto_id'])
                         ->where('unidad_medida_id', $detalle['unidad_medida_id'] ?? null)
                         ->whereHas('entrada', fn($q) => $q->where('local_id', $data['local_id'])->where('activo', 1))
                         ->avg('precio_unitario') ?? 0;
                 }
-
                 VentaDetalle::create([
                     'venta_id'         => $venta->id,
                     'tipo'             => $detalle['tipo'],
@@ -260,9 +190,15 @@ class VentaController extends Controller
                     'cantidad'         => $detalle['cantidad'],
                     'precio_costo_ref' => $precioCostoRef,
                     'precio_unitario'  => $detalle['precio_unitario'],
-                    'subtotal'         => (float) $detalle['cantidad'] * (float) $detalle['precio_unitario'],
+                    'subtotal'         => (float)$detalle['cantidad'] * (float)$detalle['precio_unitario'],
                 ]);
             }
+
+            // Sincronizar inventario (verifica stock, descuenta y registra salida)
+            InventarioHelper::sincronizarVenta(
+                $venta, $empresaId, (int)$data['local_id'],
+                $data['detalles'], $user->id, $data['fecha']
+            );
 
             // Marcar recepción como entregado
             if (!empty($data['recepcion_id'])) {
@@ -329,11 +265,9 @@ class VentaController extends Controller
 
         $empresaId = $venta->empresa_id;
 
-        DB::transaction(function () use ($data, $empresaId, $venta) {
+        DB::transaction(function () use ($data, $empresaId, $venta, $user) {
             // Calcular totales
-            $subtotal = collect($data['detalles'])->sum(fn($d) =>
-                (float) $d['cantidad'] * (float) $d['precio_unitario']
-            );
+            $subtotal  = collect($data['detalles'])->sum(fn($d) => (float)$d['cantidad'] * (float)$d['precio_unitario']);
             $descuento = (float) ($data['descuento'] ?? 0);
             $total     = $subtotal - $descuento;
 
@@ -353,12 +287,11 @@ class VentaController extends Controller
             foreach ($data['detalles'] as $detalle) {
                 $precioCostoRef = 0;
                 if ($detalle['tipo'] === 'producto' && !empty($detalle['producto_id'])) {
-                    $precioCostoRef = (float) \App\Models\EntradaAlmacenDetalle::where('producto_id',      $detalle['producto_id'])
+                    $precioCostoRef = (float) \App\Models\EntradaAlmacenDetalle::where('producto_id', $detalle['producto_id'])
                         ->where('unidad_medida_id', $detalle['unidad_medida_id'] ?? null)
                         ->whereHas('entrada', fn($q) => $q->where('local_id', $data['local_id'])->where('activo', 1))
                         ->avg('precio_unitario') ?? 0;
                 }
-
                 VentaDetalle::create([
                     'venta_id'         => $venta->id,
                     'tipo'             => $detalle['tipo'],
@@ -369,7 +302,7 @@ class VentaController extends Controller
                     'cantidad'         => $detalle['cantidad'],
                     'precio_costo_ref' => $precioCostoRef,
                     'precio_unitario'  => $detalle['precio_unitario'],
-                    'subtotal'         => (float) $detalle['cantidad'] * (float) $detalle['precio_unitario'],
+                    'subtotal'         => (float)$detalle['cantidad'] * (float)$detalle['precio_unitario'],
                 ]);
             }
 
@@ -383,6 +316,12 @@ class VentaController extends Controller
                     'monto'          => $pago['monto'],
                 ]);
             }
+
+            // Sincronizar inventario con lógica de delta idempotente
+            InventarioHelper::sincronizarVenta(
+                $venta, $empresaId, (int)$data['local_id'],
+                $data['detalles'], $user->id, $data['fecha']
+            );
         });
 
         return redirect()->route('ventas.index')
