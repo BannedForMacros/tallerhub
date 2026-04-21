@@ -13,8 +13,8 @@ import {
     BalancePorClasificacion,
 } from '@/types';
 
-const fmt    = (n: number) => `S/ ${n.toFixed(2)}`;
-const fmtPct = (n: number) => `${n >= 0 ? '+' : ''}${n.toFixed(1)}%`;
+const fmt    = (n: number | string | null | undefined) => `S/ ${(+(n ?? 0)).toFixed(2)}`;
+const fmtPct = (n: number | string | null | undefined) => { const v = +(n ?? 0); return `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`; };
 const COLORS  = ['#2563EB','#16A34A','#D97706','#DC2626','#7C3AED','#0891B2','#DB2777','#059669'];
 
 // ── Styles ────────────────────────────────────────────────────────────────────
@@ -41,17 +41,17 @@ interface Props extends PageProps {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const calcGananciaVenta = (v: BalanceVenta) => {
-    const items = v.detalles.filter(d => d.tipo === 'producto' && d.precio_costo_ref > 0);
+    const items = v.detalles.filter(d => d.tipo === 'producto' && Number(d.precio_costo_ref) > 0);
     if (!items.length) return null;
-    return items.reduce((s, d) => s + (d.precio_unitario - d.precio_costo_ref) * d.cantidad, 0);
+    return items.reduce((s, d) => s + (Number(d.precio_unitario) - Number(d.precio_costo_ref)) * Number(d.cantidad), 0);
 };
 const calcGananciaItem = (d: BalanceVentaItem) =>
-    (d.tipo === 'producto' && d.precio_costo_ref > 0)
-        ? (d.precio_unitario - d.precio_costo_ref) * d.cantidad
+    (d.tipo === 'producto' && Number(d.precio_costo_ref) > 0)
+        ? (Number(d.precio_unitario) - Number(d.precio_costo_ref)) * Number(d.cantidad)
         : null;
 const calcPctItem = (d: BalanceVentaItem) =>
-    (d.tipo === 'producto' && d.precio_costo_ref > 0)
-        ? (d.precio_unitario - d.precio_costo_ref) / d.precio_costo_ref * 100
+    (d.tipo === 'producto' && Number(d.precio_costo_ref) > 0)
+        ? (Number(d.precio_unitario) - Number(d.precio_costo_ref)) / Number(d.precio_costo_ref) * 100
         : null;
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -140,7 +140,7 @@ export default function Estadisticas({
     }, [gastos.lista, gTipo]);
     const metodosGasto = useMemo(() => [...new Set(gastos.lista.map(g => g.metodo_pago).filter(Boolean) as string[])].sort(), [gastos.lista]);
 
-    const totalMetodos = ventas.por_metodo.reduce((s, m) => s + m.total, 0);
+    const totalMetodos = ventas.por_metodo.reduce((s, m) => s + Number(m.total), 0);
 
     return (
         <AuthenticatedLayout>
@@ -191,21 +191,21 @@ export default function Estadisticas({
                     label="Ganancia Bruta"
                     value={fmt(resumen.ganancia_bruta)}
                     sub={`${fmtPct(resumen.margen_pct)} margen en productos`}
-                    color={resumen.ganancia_bruta >= 0 ? '#059669' : '#DC2626'}
-                    bg={resumen.ganancia_bruta >= 0 ? '#ECFDF5' : '#FEF2F2'}
+                    color={Number(resumen.ganancia_bruta) >= 0 ? '#059669' : '#DC2626'}
+                    bg={Number(resumen.ganancia_bruta) >= 0 ? '#ECFDF5' : '#FEF2F2'}
                 />
                 <KpiCard label="Compras Almacén"  value={fmt(resumen.compras_almacen)} sub={`${entradas.lista.length} entradas`}            color="#D97706" bg="#FFF7ED" />
                 <KpiCard label="Gastos"           value={fmt(resumen.gastos)}          sub={`${gastos.lista.length} registros`}             color="#DC2626" bg="#FEF2F2" />
                 {/* Resultado – special card */}
-                <div style={{ background: resumen.resultado >= 0 ? '#ECFDF5' : '#FEF2F2', border:`2px solid ${resumen.resultado >= 0 ? '#16A34A' : '#DC2626'}`, borderRadius:12, padding:'14px 16px' }}>
+                <div style={{ background: Number(resumen.resultado) >= 0 ? '#ECFDF5' : '#FEF2F2', border:`2px solid ${Number(resumen.resultado) >= 0 ? '#16A34A' : '#DC2626'}`, borderRadius:12, padding:'14px 16px' }}>
                     <p style={{ fontSize:10, fontWeight:700, color:'#64748B', textTransform:'uppercase', letterSpacing:'0.5px', margin:'0 0 4px' }}>Resultado</p>
-                    <p style={{ fontSize:18, fontWeight:800, color: resumen.resultado >= 0 ? '#16A34A' : '#DC2626', margin:'0 0 2px', lineHeight:1.2 }}>{fmt(resumen.resultado)}</p>
+                    <p style={{ fontSize:18, fontWeight:800, color: Number(resumen.resultado) >= 0 ? '#16A34A' : '#DC2626', margin:'0 0 2px', lineHeight:1.2 }}>{fmt(resumen.resultado)}</p>
                     <p style={{ fontSize:10, color:'#94A3B8', margin:0 }}>Ing − Compras − Gastos</p>
                 </div>
             </div>
 
             {/* Descuentos notice */}
-            {resumen.descuentos > 0 && (
+            {Number(resumen.descuentos) > 0 && (
                 <div style={{ background:'#FFFBEB', border:'1px solid #FDE68A', borderRadius:10, padding:'10px 16px', marginBottom:16, fontSize:13, display:'flex', gap:16, alignItems:'center' }}>
                     <span style={{ fontWeight:700, color:'#92400E' }}>Descuentos aplicados:</span>
                     <span style={{ color:'#B45309', fontWeight:600 }}>{fmt(resumen.descuentos)}</span>
@@ -288,7 +288,7 @@ export default function Estadisticas({
                             </ResponsiveContainer>
                             <div style={{ marginTop:10 }}>
                                 {ventas.por_metodo.map((m, i) => {
-                                    const pct = totalMetodos > 0 ? (m.total / totalMetodos * 100).toFixed(1) : '0';
+                                    const pct = totalMetodos > 0 ? (Number(m.total) / totalMetodos * 100).toFixed(1) : '0';
                                     return (
                                         <div key={m.nombre} style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 0', borderBottom:'1px solid #F1F5F9' }}>
                                             <div style={{ width:10, height:10, borderRadius:'50%', background:COLORS[i % COLORS.length], flexShrink:0 }} />
