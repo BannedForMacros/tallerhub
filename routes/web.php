@@ -137,6 +137,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/reportes/clientes-top',                  [ReporteController::class, 'clientesTop'])->name('reportes.clientes-top');
     Route::get('/reportes/tiempo-servicio',               [ReporteController::class, 'tiempoServicio'])->name('reportes.tiempo-servicio');
     Route::get('/reportes/pdf',                           [ReporteController::class, 'pdf'])->name('reportes.pdf');
+    Route::get('/reportes/estadisticas',                  [ReporteController::class, 'estadisticas'])->name('reportes.estadisticas');
+    Route::get('/reportes/balance-financiero',            [ReporteController::class, 'balanceFinanciero'])->name('reportes.balance-financiero');
 
     // GASTOS
     Route::get   ('/gastos',               [GastoController::class, 'index'])->name('gastos.index');

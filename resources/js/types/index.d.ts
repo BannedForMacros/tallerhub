@@ -498,3 +498,127 @@ export interface ReporteTiempoServicio {
     max_horas: number;
     total_casos: number;
 }
+
+// ── Balance Financiero / Estadísticas ──────────────────────
+export interface BalanceResumen {
+    ingresos_bruto:  number;
+    descuentos:      number;
+    ingresos_neto:   number;
+    cantidad_ventas: number;
+    clientes_unicos: number;
+    ganancia_bruta:  number;
+    margen_pct:      number;
+    compras_almacen: number;
+    gastos:          number;
+    resultado:       number;
+}
+
+export interface BalanceVentaItem {
+    venta_id:        number;
+    tipo:            string;
+    descripcion:     string;
+    cantidad:        number;
+    precio_unitario: number;
+    precio_costo_ref:number;
+    subtotal:        number;
+    unidad:          string | null;
+}
+
+export interface BalanceVentaPago {
+    venta_id: number;
+    metodo:   string;
+    cuenta:   string | null;
+    monto:    number;
+}
+
+export interface BalanceVenta {
+    id:          number;
+    codigo:      string;
+    fecha:       string;
+    hora:        string;
+    cliente:     string | null;
+    cliente_dni: string | null;
+    subtotal:    number;
+    descuento:   number;
+    total:       number;
+    estado:      string;
+    detalles:    BalanceVentaItem[];
+    pagos:       BalanceVentaPago[];
+}
+
+export interface BalanceEntradaItem {
+    entrada_id:      number;
+    producto:        string;
+    unidad:          string | null;
+    proveedor:       string | null;
+    cantidad:        number;
+    precio_unitario: number;
+    subtotal:        number;
+}
+
+export interface BalanceEntrada {
+    id:       number;
+    codigo:   string;
+    fecha:    string;
+    motivo:   string | null;
+    total:    number;
+    usuario:  string | null;
+    detalles: BalanceEntradaItem[];
+}
+
+export interface BalanceGasto {
+    id:                number;
+    fecha:             string;
+    descripcion:       string | null;
+    comprobante_numero:string | null;
+    observaciones:     string | null;
+    monto:             number;
+    tipo:              string;
+    clasificacion:     string;
+    descripcion_gasto: string;
+    metodo_pago:       string | null;
+    cuenta_pago:       string | null;
+    usuario:           string | null;
+}
+
+export interface BalanceMetodoPago {
+    nombre:         string;
+    total:          number;
+    cantidad_ventas:number;
+}
+
+export interface BalancePorProducto {
+    nombre:         string;
+    cantidad_total: number;
+    total:          number;
+}
+
+export interface BalancePorTipo {
+    nombre: string;
+    total:  number;
+}
+
+export interface BalancePorClasificacion {
+    tipo:          string;
+    clasificacion: string;
+    total:         number;
+    cantidad:      number;
+}
+
+export interface BalanceData {
+    resumen:  BalanceResumen;
+    ventas: {
+        lista:      BalanceVenta[];
+        por_metodo: BalanceMetodoPago[];
+        por_dia:    ReporteVentaDia[];
+    };
+    entradas: {
+        lista:        BalanceEntrada[];
+        por_producto: BalancePorProducto[];
+    };
+    gastos: {
+        lista:             BalanceGasto[];
+        por_tipo:          BalancePorTipo[];
+        por_clasificacion: BalancePorClasificacion[];
+    };
+}
