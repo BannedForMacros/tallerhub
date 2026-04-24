@@ -13,11 +13,12 @@ interface Props {
     placeholder?: string;
     error?: string;
     required?: boolean;
+    mb?: number;
 }
 
 export default function SelectField({
     label, name, value, onChange,
-    options, placeholder, error, required,
+    options, placeholder, error, required, mb,
 }: Props) {
     const [open, setOpen] = useState(false);
     const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
@@ -107,7 +108,7 @@ export default function SelectField({
     );
 
     return (
-        <div style={{ marginBottom: 18 }} ref={ref}>
+        <div style={{ marginBottom: mb ?? 18 }} ref={ref}>
             {label && (
                 <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#1E293B', marginBottom: 7 }}>
                     {label} {required && <span style={{ color: '#EF4444' }}>*</span>}

@@ -201,10 +201,11 @@ export default function EntradaForm({
                     {/* Header */}
                     <div style={{
                         display: 'grid',
-                        gridTemplateColumns: '200px 80px 150px 110px 90px 110px 80px 36px',
+                        gridTemplateColumns: '2fr 70px 1.3fr 1fr 80px 100px 72px 32px',
                         gap: 8, padding: '10px 12px',
                         backgroundColor: '#1E293B', borderRadius: '10px 10px 0 0',
-                        minWidth: 900,
+                        minWidth: 860, width: '100%', boxSizing: 'border-box',
+                        alignItems: 'center',
                     }}>
                         {['Producto', 'Unidad', 'Proveedor', 'Nº Factura', 'Cantidad', 'Total (S/)', 'P. Unit.', ''].map(h => (
                             <span key={h} style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase' }}>{h}</span>
@@ -214,7 +215,7 @@ export default function EntradaForm({
                     {/* Filas */}
                     <div style={{
                         border: '1px solid #E2E8F0', borderTop: 'none',
-                        borderRadius: '0 0 10px 10px', minWidth: 900,
+                        borderRadius: '0 0 10px 10px', minWidth: 860, width: '100%', boxSizing: 'border-box',
                     }}>
                         {data.detalles.map((d: DetalleForm, i: number) => {
                             const prod     = productos.find(p => p.id === Number(d.producto_id));
@@ -223,21 +224,21 @@ export default function EntradaForm({
                             return (
                                 <div key={i} style={{
                                     display: 'grid',
-                                    gridTemplateColumns: '200px 80px 150px 110px 90px 110px 80px 36px',
+                                    gridTemplateColumns: '2fr 70px 1.3fr 1fr 80px 100px 72px 32px',
                                     gap: 8, padding: '10px 12px', alignItems: 'center',
                                     backgroundColor: i % 2 === 0 ? '#F8FAFC' : '#fff',
                                     borderBottom: i < data.detalles.length - 1 ? '1px solid #F1F5F9' : 'none',
                                 }}>
                                     {/* Producto */}
                                     <SelectField
-                                        label="" name={`p_${i}`} value={d.producto_id}
+                                        label="" name={`p_${i}`} value={d.producto_id} mb={0}
                                         onChange={e => actualizarDetalle(i, 'producto_id', e.target.value)}
                                         options={productosFiltrados.map((p: ProductoAlmacen) => ({ value: p.id, label: p.nombre }))}
                                         placeholder="Seleccionar"
                                     />
                                     {/* Unidad */}
                                     <SelectField
-                                        label="" name={`u_${i}`} value={d.unidad_medida_id}
+                                        label="" name={`u_${i}`} value={d.unidad_medida_id} mb={0}
                                         onChange={e => actualizarDetalle(i, 'unidad_medida_id', e.target.value)}
                                         options={unidades.map((u: any) => ({
                                             value: u.unidad_medida_id,
@@ -247,17 +248,17 @@ export default function EntradaForm({
                                     />
                                     {/* Proveedor */}
                                     <SelectField
-                                        label="" name={`pr_${i}`} value={d.proveedor_id}
+                                        label="" name={`pr_${i}`} value={d.proveedor_id} mb={0}
                                         onChange={e => actualizarDetalle(i, 'proveedor_id', e.target.value)}
                                         options={proveedoresFiltrados.map((p: Proveedor) => ({ value: p.id, label: p.nombre }))}
                                         placeholder="Proveedor"
                                     />
                                     {/* Nº Factura */}
                                     <input
-                                        type="text" value={d.numero_factura} placeholder="Ej. F001-123"
+                                        type="text" value={d.numero_factura} placeholder="F001-123"
                                         onChange={e => actualizarDetalle(i, 'numero_factura', e.target.value)}
                                         style={{
-                                            width: '100%', padding: '10px 8px', borderRadius: 10,
+                                            width: '100%', padding: '11px 8px', borderRadius: 10,
                                             border: '1.5px solid #E2E8F0', fontSize: 12,
                                             outline: 'none', boxSizing: 'border-box',
                                         }}
@@ -268,7 +269,7 @@ export default function EntradaForm({
                                         onWheel={e => e.currentTarget.blur()}
                                         onChange={e => actualizarDetalle(i, 'cantidad', e.target.value)}
                                         style={{
-                                            width: '100%', padding: '10px 8px', borderRadius: 10,
+                                            width: '100%', padding: '11px 8px', borderRadius: 10,
                                             border: '1.5px solid #E2E8F0', fontSize: 13,
                                             outline: 'none', boxSizing: 'border-box', textAlign: 'right',
                                         }}
@@ -279,7 +280,7 @@ export default function EntradaForm({
                                         onWheel={e => e.currentTarget.blur()}
                                         onChange={e => actualizarDetalle(i, 'subtotal', e.target.value)}
                                         style={{
-                                            width: '100%', padding: '10px 8px', borderRadius: 10,
+                                            width: '100%', padding: '11px 8px', borderRadius: 10,
                                             border: '1.5px solid #2563EB', fontSize: 13, fontWeight: 700,
                                             outline: 'none', boxSizing: 'border-box', textAlign: 'right',
                                             backgroundColor: '#EFF6FF',
@@ -287,7 +288,7 @@ export default function EntradaForm({
                                     />
                                     {/* Precio unitario calculado — solo lectura */}
                                     <div style={{
-                                        padding: '10px 8px', borderRadius: 10,
+                                        padding: '11px 8px', borderRadius: 10,
                                         backgroundColor: '#F1F5F9',
                                         border: '1.5px solid #E2E8F0',
                                         fontSize: 11, color: '#64748B',
