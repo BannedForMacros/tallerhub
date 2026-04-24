@@ -279,6 +279,7 @@ export interface EntradaAlmacenDetalle {
     producto_id: number;
     unidad_medida_id: number;
     proveedor_id: number | null;
+    numero_factura: string | null;
     cantidad: number;
     precio_unitario: number;
     subtotal: number;
@@ -551,6 +552,7 @@ export interface BalanceEntradaItem {
     producto:        string;
     unidad:          string | null;
     proveedor:       string | null;
+    numero_factura:  string | null;
     cantidad:        number;
     precio_unitario: number;
     subtotal:        number;

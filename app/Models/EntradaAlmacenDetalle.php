@@ -9,7 +9,7 @@ class EntradaAlmacenDetalle extends Model
 
     protected $fillable = [
         'entrada_id', 'producto_id', 'unidad_medida_id',
-        'proveedor_id', 'cantidad', 'precio_unitario', 'subtotal',
+        'proveedor_id', 'numero_factura', 'cantidad', 'precio_unitario', 'subtotal',
     ];
 
     protected $casts = [

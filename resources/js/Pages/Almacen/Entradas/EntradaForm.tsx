@@ -10,6 +10,7 @@ interface DetalleForm {
     producto_id:      string;
     unidad_medida_id: string;
     proveedor_id:     string;
+    numero_factura:   string;
     cantidad:         string;
     subtotal:         string;
     precio_unitario:  string;
@@ -38,7 +39,7 @@ interface Props {
 
 export const detalleVacio = (): DetalleForm => ({
     producto_id: '', unidad_medida_id: '', proveedor_id: '',
-    cantidad: '', subtotal: '', precio_unitario: '0.0000',
+    numero_factura: '', cantidad: '', subtotal: '', precio_unitario: '0.0000',
 });
 
 export default function EntradaForm({
@@ -200,12 +201,12 @@ export default function EntradaForm({
                     {/* Header */}
                     <div style={{
                         display: 'grid',
-                        gridTemplateColumns: '220px 90px 160px 90px 110px 85px 36px',
+                        gridTemplateColumns: '200px 80px 150px 110px 90px 110px 80px 36px',
                         gap: 8, padding: '10px 12px',
                         backgroundColor: '#1E293B', borderRadius: '10px 10px 0 0',
-                        minWidth: 800,
+                        minWidth: 900,
                     }}>
-                        {['Producto', 'Unidad', 'Proveedor', 'Cantidad', 'Total (S/)', 'P. Unit.', ''].map(h => (
+                        {['Producto', 'Unidad', 'Proveedor', 'Nº Factura', 'Cantidad', 'Total (S/)', 'P. Unit.', ''].map(h => (
                             <span key={h} style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase' }}>{h}</span>
                         ))}
                     </div>
@@ -213,7 +214,7 @@ export default function EntradaForm({
                     {/* Filas */}
                     <div style={{
                         border: '1px solid #E2E8F0', borderTop: 'none',
-                        borderRadius: '0 0 10px 10px', minWidth: 800,
+                        borderRadius: '0 0 10px 10px', minWidth: 900,
                     }}>
                         {data.detalles.map((d: DetalleForm, i: number) => {
                             const prod     = productos.find(p => p.id === Number(d.producto_id));
@@ -222,7 +223,7 @@ export default function EntradaForm({
                             return (
                                 <div key={i} style={{
                                     display: 'grid',
-                                    gridTemplateColumns: '220px 90px 160px 90px 110px 85px 36px',
+                                    gridTemplateColumns: '200px 80px 150px 110px 90px 110px 80px 36px',
                                     gap: 8, padding: '10px 12px', alignItems: 'center',
                                     backgroundColor: i % 2 === 0 ? '#F8FAFC' : '#fff',
                                     borderBottom: i < data.detalles.length - 1 ? '1px solid #F1F5F9' : 'none',
@@ -250,6 +251,16 @@ export default function EntradaForm({
                                         onChange={e => actualizarDetalle(i, 'proveedor_id', e.target.value)}
                                         options={proveedoresFiltrados.map((p: Proveedor) => ({ value: p.id, label: p.nombre }))}
                                         placeholder="Proveedor"
+                                    />
+                                    {/* Nº Factura */}
+                                    <input
+                                        type="text" value={d.numero_factura} placeholder="Ej. F001-123"
+                                        onChange={e => actualizarDetalle(i, 'numero_factura', e.target.value)}
+                                        style={{
+                                            width: '100%', padding: '10px 8px', borderRadius: 10,
+                                            border: '1.5px solid #E2E8F0', fontSize: 12,
+                                            outline: 'none', boxSizing: 'border-box',
+                                        }}
                                     />
                                     {/* Cantidad */}
                                     <input

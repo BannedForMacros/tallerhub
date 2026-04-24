@@ -27,7 +27,8 @@ export default function EntradasEdit({ entrada, empresas, locales, productos, pr
             ? entrada.detalles.map(d => ({
                 producto_id:      String(d.producto_id),
                 unidad_medida_id: String(d.unidad_medida_id),
-                proveedor_id:     d.proveedor_id ? String(d.proveedor_id) : '',
+                proveedor_id:     d.proveedor_id   ? String(d.proveedor_id) : '',
+                numero_factura:   d.numero_factura ?? '',
                 cantidad:         String(d.cantidad),
                 subtotal:         String(d.subtotal),
                 precio_unitario:  String(d.precio_unitario),
