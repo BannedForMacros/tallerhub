@@ -193,4 +193,40 @@ class InventarioController extends Controller
             'diferencia'     => round($stockNuevo - $stockAnterior, 4),
         ]);
     }
+
+    /**
+     * Recalcula el stock de TODOS los ítems de inventario visibles para el
+     * usuario actual (scoped por empresa cuando no es superadmin). Útil como
+     * mantenimiento general tras corregir bugs históricos.
+     */
+    public function resincronizarTodo()
+    {
+        $user      = auth()->user();
+        $empresaId = $user->esSuperAdmin() ? null : $user->empresa_id;
+
+        $items = Inventario::when($empresaId, fn($q) => $q->where('empresa_id', $empresaId))->get();
+
+        $totalRevisados  = 0;
+        $totalCorregidos = 0;
+        $ajusteNeto      = 0.0;
+
+        foreach ($items as $inv) {
+            $stockAnterior = (float) $inv->stock;
+            $stockNuevo = InventarioHelper::sincronizarStockDesdeMovimientos(
+                $inv->empresa_id, $inv->local_id, $inv->producto_id, $inv->unidad_medida_id
+            );
+            $totalRevisados++;
+            $diff = $stockNuevo - $stockAnterior;
+            if (abs($diff) > 0.00001) {
+                $totalCorregidos++;
+                $ajusteNeto += $diff;
+            }
+        }
+
+        return response()->json([
+            'total_revisados'  => $totalRevisados,
+            'total_corregidos' => $totalCorregidos,
+            'ajuste_neto'      => round($ajusteNeto, 4),
+        ]);
+    }
 }

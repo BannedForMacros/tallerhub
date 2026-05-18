@@ -66,10 +66,11 @@ export default function InventarioIndex({ inventario, locales, categorias, empre
     const [filtroBusqueda,  setFiltroBusqueda]  = useState('');
     const [soloStockBajo,   setSoloStockBajo]   = useState(false);
 
-    const [kardex,        setKardex]        = useState<KardexData | null>(null);
-    const [kardexLoading, setKardexLoading] = useState(false);
-    const [kardexError,   setKardexError]   = useState<string | null>(null);
-    const [resyncLoading, setResyncLoading] = useState(false);
+    const [kardex,           setKardex]           = useState<KardexData | null>(null);
+    const [kardexLoading,    setKardexLoading]    = useState(false);
+    const [kardexError,      setKardexError]      = useState<string | null>(null);
+    const [resyncLoading,    setResyncLoading]    = useState(false);
+    const [resyncAllLoading, setResyncAllLoading] = useState(false);
 
     const cargarKardex = async (id: number) => {
         setKardexLoading(true);
@@ -87,6 +88,49 @@ export default function InventarioIndex({ inventario, locales, categorias, empre
     const abrirKardex = (inv: Inventario) => {
         setKardex({ inventario: { id: inv.id, producto: null, unidad_medida: null, local: null, stock: 0, stock_minimo: 0 }, movimientos: [] });
         cargarKardex(inv.id);
+    };
+
+    const ejecutarRecalcularTodo = async () => {
+        setResyncAllLoading(true);
+        try {
+            const { data } = await axios.post<{ total_revisados: number; total_corregidos: number; ajuste_neto: number }>(
+                route('almacen.inventario.resincronizar-todo')
+            );
+            if (data.total_corregidos === 0) {
+                toast.success(`Inventario verificado: ${data.total_revisados} ítems revisados, todos correctos.`, { duration: 5000 });
+            } else {
+                toast.success(
+                    `Inventario recalculado: ${data.total_corregidos} de ${data.total_revisados} ítems corregidos (ajuste neto: ${data.ajuste_neto > 0 ? '+' : ''}${data.ajuste_neto.toFixed(2)}).`,
+                    { duration: 7000 }
+                );
+            }
+            router.reload({ only: ['inventario'] });
+        } catch (e: any) {
+            toast.error(e?.response?.data?.message ?? 'No se pudo recalcular el inventario.');
+        } finally {
+            setResyncAllLoading(false);
+        }
+    };
+
+    const confirmarRecalcularTodo = () => {
+        toast((t) => (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <p style={{ fontSize: 14, fontWeight: 600, color: '#1E293B', margin: 0 }}>¿Recalcular todo el inventario?</p>
+                <p style={{ fontSize: 13, color: '#64748B', margin: 0 }}>
+                    Se reemplazará el stock de cada ítem por la suma de sus entradas activas menos sus salidas activas.
+                    Útil para corregir desfases. No afecta los movimientos en sí.
+                </p>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                    <button onClick={() => toast.dismiss(t.id)} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #E2E8F0', backgroundColor: '#fff', cursor: 'pointer', fontSize: 13 }}>Cancelar</button>
+                    <button
+                        onClick={() => { toast.dismiss(t.id); ejecutarRecalcularTodo(); }}
+                        style={{ padding: '6px 14px', borderRadius: 8, border: 'none', backgroundColor: '#2563EB', cursor: 'pointer', fontSize: 13, color: '#fff', fontWeight: 600 }}
+                    >
+                        Recalcular
+                    </button>
+                </div>
+            </div>
+        ), { duration: 12000 });
     };
 
     const recalcularStock = async () => {
@@ -158,6 +202,25 @@ export default function InventarioIndex({ inventario, locales, categorias, empre
                         Stock actual de productos por local
                     </p>
                 </div>
+                <button
+                    onClick={confirmarRecalcularTodo}
+                    disabled={resyncAllLoading}
+                    style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 8,
+                        padding: '10px 16px', borderRadius: 10,
+                        border: '1.5px solid #2563EB',
+                        backgroundColor: resyncAllLoading ? '#EFF6FF' : '#fff',
+                        color: '#2563EB',
+                        cursor: resyncAllLoading ? 'wait' : 'pointer',
+                        fontSize: 13, fontWeight: 700,
+                        opacity: resyncAllLoading ? 0.7 : 1,
+                        whiteSpace: 'nowrap',
+                    }}
+                    title="Recalcula el stock de todos los ítems del inventario desde los movimientos reales"
+                >
+                    <RefreshCw size={15} className={resyncAllLoading ? 'animate-spin' : ''} />
+                    {resyncAllLoading ? 'Recalculando…' : 'Recalcular inventario'}
+                </button>
             </div>
 
             {/* Tarjetas resumen */}

@@ -96,8 +96,9 @@ Route::middleware('auth')->group(function () {
 
     // Inventario
     Route::get('/almacen/inventario',                     [InventarioController::class, 'index'])->name('almacen.inventario.index');
-    Route::get ('/almacen/inventario/{inventario}/kardex',        [InventarioController::class, 'kardex'])      ->name('almacen.inventario.kardex');
-    Route::post('/almacen/inventario/{inventario}/resincronizar', [InventarioController::class, 'resincronizar'])->name('almacen.inventario.resincronizar');
+    Route::get ('/almacen/inventario/{inventario}/kardex',        [InventarioController::class, 'kardex'])         ->name('almacen.inventario.kardex');
+    Route::post('/almacen/inventario/{inventario}/resincronizar', [InventarioController::class, 'resincronizar'])  ->name('almacen.inventario.resincronizar');
+    Route::post('/almacen/inventario/resincronizar-todo',         [InventarioController::class, 'resincronizarTodo'])->name('almacen.inventario.resincronizar-todo');
 
     // VENTAS
     Route::get   ('/ventas',               [VentaController::class, 'index'])->name('ventas.index');
