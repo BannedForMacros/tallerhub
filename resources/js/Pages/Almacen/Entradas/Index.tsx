@@ -85,7 +85,7 @@ export default function EntradasIndex({ entradas }: Props) {
                         onClick={() => setModalVer(r)}
                         icon={<Eye size={13} />} tooltip="Ver detalle" color="blue"
                     />
-                    {r.activo && (
+                    {r.activo ? (
                     <>
                         <Link href={route('almacen.entradas.edit', r.id)}>
                             <ActionButton
@@ -98,10 +98,17 @@ export default function EntradasIndex({ entradas }: Props) {
                                 toast((t) => (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                                         <p style={{ fontSize: 14, fontWeight: 600, color: '#1E293B', margin: 0 }}>¿Anular entrada?</p>
-                                        <p style={{ fontSize: 13, color: '#64748B', margin: 0 }}>Esta acción no se puede deshacer.</p>
+                                        <p style={{ fontSize: 13, color: '#64748B', margin: 0 }}>Se descontará el stock que aportó esta entrada. Si las unidades ya fueron vendidas o salieron, la anulación será bloqueada.</p>
                                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                                             <button onClick={() => toast.dismiss(t.id)} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #E2E8F0', backgroundColor: '#fff', cursor: 'pointer', fontSize: 13 }}>Cancelar</button>
-                                            <button onClick={() => { toast.dismiss(t.id); router.patch(route('almacen.entradas.toggle', r.id), {}, { onSuccess: () => toast.success('Entrada anulada.') }); }} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', backgroundColor: '#DC2626', cursor: 'pointer', fontSize: 13, color: '#fff', fontWeight: 600 }}>Anular</button>
+                                            <button onClick={() => {
+                                                toast.dismiss(t.id);
+                                                router.patch(route('almacen.entradas.toggle', r.id), {}, {
+                                                    preserveScroll: true,
+                                                    onSuccess: () => toast.success('Entrada anulada y stock recalculado.'),
+                                                    onError: (errs) => toast.error(errs.stock ?? 'No se pudo anular la entrada.'),
+                                                });
+                                            }} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', backgroundColor: '#DC2626', cursor: 'pointer', fontSize: 13, color: '#fff', fontWeight: 600 }}>Anular</button>
                                         </div>
                                     </div>
                                 ), { duration: 10000 });
@@ -109,6 +116,29 @@ export default function EntradasIndex({ entradas }: Props) {
                             icon={<Trash2 size={13} />} tooltip="Anular" color="red"
                         />
                     </>
+                    ) : (
+                        <ActionButton
+                            onClick={() => {
+                                toast((t) => (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                        <p style={{ fontSize: 14, fontWeight: 600, color: '#1E293B', margin: 0 }}>¿Reactivar entrada?</p>
+                                        <p style={{ fontSize: 13, color: '#64748B', margin: 0 }}>Se volverá a sumar al inventario el stock que aportaba esta entrada.</p>
+                                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                                            <button onClick={() => toast.dismiss(t.id)} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #E2E8F0', backgroundColor: '#fff', cursor: 'pointer', fontSize: 13 }}>Cancelar</button>
+                                            <button onClick={() => {
+                                                toast.dismiss(t.id);
+                                                router.patch(route('almacen.entradas.toggle', r.id), {}, {
+                                                    preserveScroll: true,
+                                                    onSuccess: () => toast.success('Entrada reactivada y stock recalculado.'),
+                                                    onError: (errs) => toast.error(errs.stock ?? 'No se pudo reactivar la entrada.'),
+                                                });
+                                            }} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', backgroundColor: '#16A34A', cursor: 'pointer', fontSize: 13, color: '#fff', fontWeight: 600 }}>Reactivar</button>
+                                        </div>
+                                    </div>
+                                ), { duration: 10000 });
+                            }}
+                            icon={<RotateCcw size={13} />} tooltip="Reactivar" color="green"
+                        />
                     )}
                 </div>
             ),

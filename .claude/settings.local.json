@@ -18,7 +18,10 @@
       "Bash(php -l /home/bannedformacros/Proyectos/tallerhub/app/Helpers/InventarioHelper.php)",
       "Bash(php *)",
       "Bash(python3 *)",
-      "Bash(powershell *)"
+      "Bash(powershell *)",
+      "Bash(npx --yes typescript@5 tsc --noEmit)",
+      "Bash(cmd /c \"npx tsc --noEmit\")",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 80)"
     ]
   }
 }

@@ -2,7 +2,7 @@ import { formatFecha } from '@/helpers/fecha';
 import { useState } from 'react';
 import { router } from '@inertiajs/react';
 import { toast, Toaster } from 'react-hot-toast';
-import { Plus, Trash2, Eye, Pencil } from 'lucide-react';
+import { Plus, Trash2, Eye, Pencil, RotateCcw } from 'lucide-react';
 import { Head, Link } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Table from '@/Components/Table';
@@ -30,15 +30,37 @@ export default function SalidasIndex({ salidas }: Props) {
         toast((t) => (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <p style={{ fontSize: 14, fontWeight: 600, color: '#1E293B', margin: 0 }}>¿Anular salida?</p>
-                <p style={{ fontSize: 13, color: '#64748B', margin: 0 }}>Esta acción no se puede deshacer.</p>
+                <p style={{ fontSize: 13, color: '#64748B', margin: 0 }}>Se devolverá al inventario el stock descontado por esta salida.</p>
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                     <button onClick={() => toast.dismiss(t.id)} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #E2E8F0', backgroundColor: '#fff', cursor: 'pointer', fontSize: 13 }}>Cancelar</button>
                     <button onClick={() => {
                         toast.dismiss(t.id);
                         router.patch(route('almacen.salidas.toggle', r.id), {}, {
-                            onSuccess: () => toast.success('Salida anulada.'),
+                            preserveScroll: true,
+                            onSuccess: () => toast.success('Salida anulada y stock recalculado.'),
+                            onError: (errs) => toast.error(errs.stock ?? 'No se pudo anular la salida.'),
                         });
                     }} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', backgroundColor: '#DC2626', cursor: 'pointer', fontSize: 13, color: '#fff', fontWeight: 600 }}>Anular</button>
+                </div>
+            </div>
+        ), { duration: 10000 });
+    };
+
+    const confirmarReactivar = (r: SalidaAlmacen) => {
+        toast((t) => (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <p style={{ fontSize: 14, fontWeight: 600, color: '#1E293B', margin: 0 }}>¿Reactivar salida?</p>
+                <p style={{ fontSize: 13, color: '#64748B', margin: 0 }}>Se volverá a descontar del inventario. Si no hay stock suficiente, la reactivación será bloqueada.</p>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                    <button onClick={() => toast.dismiss(t.id)} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #E2E8F0', backgroundColor: '#fff', cursor: 'pointer', fontSize: 13 }}>Cancelar</button>
+                    <button onClick={() => {
+                        toast.dismiss(t.id);
+                        router.patch(route('almacen.salidas.toggle', r.id), {}, {
+                            preserveScroll: true,
+                            onSuccess: () => toast.success('Salida reactivada y stock recalculado.'),
+                            onError: (errs) => toast.error(errs.stock ?? 'No se pudo reactivar la salida.'),
+                        });
+                    }} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', backgroundColor: '#16A34A', cursor: 'pointer', fontSize: 13, color: '#fff', fontWeight: 600 }}>Reactivar</button>
                 </div>
             </div>
         ), { duration: 10000 });
@@ -109,14 +131,16 @@ export default function SalidasIndex({ salidas }: Props) {
             render: (r: SalidaAlmacen) => (
                 <div style={{ display: 'flex', gap: 6 }}>
                     <ActionButton onClick={() => setModalVer(r)} icon={<Eye size={13} />} tooltip="Ver detalle" color="blue" />
-                    {r.activo && r.tipo !== 'venta' && (
+                    {r.tipo !== 'venta' && (r.activo ? (
                         <>
                             <Link href={route('almacen.salidas.edit', r.id)}>
                                 <ActionButton onClick={() => {}} icon={<Pencil size={13} />} tooltip="Editar" color="amber" />
                             </Link>
                             <ActionButton onClick={() => confirmarAnular(r)} icon={<Trash2 size={13} />} tooltip="Anular" color="red" />
                         </>
-                    )}
+                    ) : (
+                        <ActionButton onClick={() => confirmarReactivar(r)} icon={<RotateCcw size={13} />} tooltip="Reactivar" color="green" />
+                    ))}
                 </div>
             ),
         },
