@@ -1,8 +1,55 @@
 import { useState, useMemo } from 'react';
-import { Head } from '@inertiajs/react';
-import { Layers, AlertTriangle, TrendingDown } from 'lucide-react';
+import { Head, Link } from '@inertiajs/react';
+import axios from 'axios';
+import { Layers, AlertTriangle, TrendingDown, History, ArrowDownCircle, ArrowUpCircle, ExternalLink } from 'lucide-react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import Modal from '@/Components/Modal';
+import Button from '@/Components/Button';
+import ActionButton from '@/Components/ActionButton';
+import { formatFecha } from '@/helpers/fecha';
 import { PageProps, Inventario, Local, CategoriaAlmacen, Empresa } from '@/types';
+
+interface KardexMovimiento {
+    id: string;
+    tipo: 'entrada' | 'salida';
+    subtipo: string | null;
+    codigo: string | null;
+    fecha: string | null;
+    cantidad: number;
+    precio_unitario: number;
+    subtotal: number;
+    activo: boolean;
+    motivo: string | null;
+    observaciones: string | null;
+    usuario: string | null;
+    proveedor: string | null;
+    numero_factura: string | null;
+    referencia_id: number | null;
+    referencia_tipo: string | null;
+    venta_codigo: string | null;
+    entrada_id: number | null;
+    salida_id: number | null;
+    saldo: number;
+}
+
+interface KardexData {
+    inventario: {
+        id: number;
+        producto: { nombre: string; codigo: string | null } | null;
+        unidad_medida: { nombre: string; abreviatura: string } | null;
+        local: { nombre: string } | null;
+        stock: number;
+        stock_minimo: number;
+    };
+    movimientos: KardexMovimiento[];
+}
+
+const SUBTIPO_LABEL: Record<string, string> = {
+    venta:               'Venta',
+    ajuste:              'Ajuste',
+    devolucion_defecto:  'Devolución',
+    otro:                'Otro',
+};
 
 interface Props extends PageProps {
     inventario: Inventario[];
@@ -17,6 +64,24 @@ export default function InventarioIndex({ inventario, locales, categorias, empre
     const [filtroEmpresa,   setFiltroEmpresa]   = useState('');
     const [filtroBusqueda,  setFiltroBusqueda]  = useState('');
     const [soloStockBajo,   setSoloStockBajo]   = useState(false);
+
+    const [kardex,        setKardex]        = useState<KardexData | null>(null);
+    const [kardexLoading, setKardexLoading] = useState(false);
+    const [kardexError,   setKardexError]   = useState<string | null>(null);
+
+    const abrirKardex = async (inv: Inventario) => {
+        setKardex({ inventario: { id: inv.id, producto: null, unidad_medida: null, local: null, stock: 0, stock_minimo: 0 }, movimientos: [] });
+        setKardexLoading(true);
+        setKardexError(null);
+        try {
+            const { data } = await axios.get<KardexData>(route('almacen.inventario.kardex', inv.id));
+            setKardex(data);
+        } catch (e: any) {
+            setKardexError(e?.response?.data?.message ?? 'No se pudo cargar el kárdex.');
+        } finally {
+            setKardexLoading(false);
+        }
+    };
 
     const datos = useMemo(() => {
         return inventario.filter(inv => {
@@ -160,12 +225,12 @@ export default function InventarioIndex({ inventario, locales, categorias, empre
                 {/* Header */}
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: '2.5fr 1.2fr 1fr 1fr 1fr 1fr',
+                    gridTemplateColumns: '2.5fr 1.2fr 1fr 1fr 1fr 1fr 70px',
                     gap: 8, padding: '12px 18px',
                     backgroundColor: '#1E293B',
                 }}>
-                    {['Producto', 'Categoría', 'Local', 'Unidad', 'Stock mínimo', 'Stock actual'].map(h => (
-                        <span key={h} style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase' }}>{h}</span>
+                    {['Producto', 'Categoría', 'Local', 'Unidad', 'Stock mínimo', 'Stock actual', ''].map((h, idx) => (
+                        <span key={idx} style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase' }}>{h}</span>
                     ))}
                 </div>
 
@@ -185,7 +250,7 @@ export default function InventarioIndex({ inventario, locales, categorias, empre
                         return (
                             <div key={inv.id} style={{
                                 display: 'grid',
-                                gridTemplateColumns: '2.5fr 1.2fr 1fr 1fr 1fr 1fr',
+                                gridTemplateColumns: '2.5fr 1.2fr 1fr 1fr 1fr 1fr 70px',
                                 gap: 8, padding: '12px 18px', alignItems: 'center',
                                 backgroundColor: i % 2 === 0 ? '#F8FAFC' : '#fff',
                                 borderBottom: i < datos.length - 1 ? '1px solid #F1F5F9' : 'none',
@@ -234,6 +299,13 @@ export default function InventarioIndex({ inventario, locales, categorias, empre
                                     {Number(inv.stock) > 0 && Number(inv.stock) <= Number(inv.stock_minimo) && <TrendingDown size={12} />}
                                     {Number(inv.stock).toFixed(2)}
                                 </div>
+                                {/* Acciones */}
+                                <ActionButton
+                                    onClick={() => abrirKardex(inv)}
+                                    icon={<History size={14} />}
+                                    tooltip="Ver movimientos"
+                                    color="blue"
+                                />
                             </div>
                         );
                     })
@@ -244,6 +316,159 @@ export default function InventarioIndex({ inventario, locales, categorias, empre
                 <p style={{ fontSize: 12, color: '#94A3B8', marginTop: 10, textAlign: 'right' }}>
                     Mostrando {datos.length} de {inventario.length} registros
                 </p>
+            )}
+
+            {/* Modal Kárdex */}
+            {kardex && (
+                <Modal
+                    show={!!kardex}
+                    onClose={() => setKardex(null)}
+                    title={kardex.inventario.producto
+                        ? `Kárdex — ${kardex.inventario.producto.nombre}`
+                        : 'Kárdex de movimientos'}
+                    maxWidth="4xl"
+                >
+                    <div>
+                        {/* Cabecera con datos del item */}
+                        <div style={{
+                            display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+                            gap: '8px 16px', marginBottom: 16,
+                            padding: '12px 14px', backgroundColor: '#F8FAFC',
+                            borderRadius: 10, border: '1px solid #E2E8F0',
+                        }}>
+                            {[
+                                ['Producto',     kardex.inventario.producto?.nombre ?? '—'],
+                                ['Código',       kardex.inventario.producto?.codigo ?? '—'],
+                                ['Local',        kardex.inventario.local?.nombre ?? '—'],
+                                ['Unidad',       kardex.inventario.unidad_medida?.abreviatura ?? '—'],
+                                ['Stock actual', Number(kardex.inventario.stock).toFixed(2)],
+                                ['Stock mínimo', Number(kardex.inventario.stock_minimo).toFixed(2)],
+                                ['Movimientos', kardexLoading ? '…' : String(kardex.movimientos.length)],
+                            ].map(([label, val]) => (
+                                <div key={label}>
+                                    <p style={{ fontSize: 10, color: '#94A3B8', textTransform: 'uppercase', margin: '0 0 2px' }}>{label}</p>
+                                    <p style={{ fontSize: 13, fontWeight: 700, color: '#1E293B', margin: 0 }}>{val}</p>
+                                </div>
+                            ))}
+                        </div>
+
+                        {kardexError && (
+                            <div style={{
+                                padding: '10px 14px', borderRadius: 8, marginBottom: 12,
+                                backgroundColor: '#FEF2F2', color: '#DC2626',
+                                fontSize: 13, border: '1px solid #FECACA',
+                            }}>
+                                {kardexError}
+                            </div>
+                        )}
+
+                        {/* Tabla de movimientos */}
+                        <div style={{ maxHeight: 460, overflowY: 'auto', border: '1px solid #E2E8F0', borderRadius: 10 }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                                <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                                    <tr style={{ backgroundColor: '#1E293B' }}>
+                                        {['Fecha', 'Tipo', 'Código', 'Detalle', 'Cantidad', 'Costo U.', 'Subtotal', 'Saldo', 'Estado'].map(h => (
+                                            <th key={h} style={{ padding: '8px 10px', color: '#fff', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', textAlign: 'left' }}>{h}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {kardexLoading && (
+                                        <tr><td colSpan={9} style={{ padding: '24px', textAlign: 'center', color: '#94A3B8' }}>Cargando movimientos…</td></tr>
+                                    )}
+                                    {!kardexLoading && kardex.movimientos.length === 0 && (
+                                        <tr><td colSpan={9} style={{ padding: '24px', textAlign: 'center', color: '#94A3B8' }}>
+                                            Sin movimientos registrados para este ítem.
+                                        </td></tr>
+                                    )}
+                                    {!kardexLoading && kardex.movimientos.map((m, i) => {
+                                        const isEntrada = m.tipo === 'entrada';
+                                        const rowBg     = i % 2 === 0 ? '#F8FAFC' : '#fff';
+                                        const dimmed    = !m.activo;
+                                        return (
+                                            <tr key={m.id} style={{ backgroundColor: rowBg, opacity: dimmed ? 0.55 : 1 }}>
+                                                <td style={{ padding: '7px 10px', color: '#64748B', whiteSpace: 'nowrap' }}>
+                                                    {m.fecha ? formatFecha(m.fecha) : '—'}
+                                                </td>
+                                                <td style={{ padding: '7px 10px' }}>
+                                                    <span style={{
+                                                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                                                        backgroundColor: isEntrada ? '#F0FDF4' : '#FFF7ED',
+                                                        color:           isEntrada ? '#16A34A' : '#D97706',
+                                                        padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                                                    }}>
+                                                        {isEntrada ? <ArrowDownCircle size={11} /> : <ArrowUpCircle size={11} />}
+                                                        {isEntrada ? 'Entrada' : (SUBTIPO_LABEL[m.subtipo ?? ''] ?? 'Salida')}
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: '7px 10px', fontWeight: 700, color: isEntrada ? '#2563EB' : '#D97706' }}>
+                                                    {m.codigo ?? '—'}
+                                                </td>
+                                                <td style={{ padding: '7px 10px', color: '#475569', fontSize: 12 }}>
+                                                    {isEntrada ? (
+                                                        <>
+                                                            {m.proveedor && <div><span style={{ color: '#94A3B8' }}>Proveedor:</span> <strong>{m.proveedor}</strong></div>}
+                                                            {m.numero_factura && <div><span style={{ color: '#94A3B8' }}>Factura:</span> {m.numero_factura}</div>}
+                                                            {m.motivo && <div style={{ color: '#64748B' }}>{m.motivo}</div>}
+                                                            {!m.proveedor && !m.numero_factura && !m.motivo && <span style={{ color: '#CBD5E1' }}>—</span>}
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            {m.subtipo === 'venta' && m.venta_codigo && m.referencia_id ? (
+                                                                <Link
+                                                                    href={route('ventas.show', m.referencia_id)}
+                                                                    style={{
+                                                                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                                                                        color: '#2563EB', textDecoration: 'none', fontWeight: 700,
+                                                                    }}
+                                                                >
+                                                                    {m.venta_codigo} <ExternalLink size={11} />
+                                                                </Link>
+                                                            ) : (
+                                                                <span style={{ color: '#64748B' }}>{m.motivo ?? '—'}</span>
+                                                            )}
+                                                            {m.observaciones && <div style={{ color: '#94A3B8', fontSize: 11 }}>{m.observaciones}</div>}
+                                                        </>
+                                                    )}
+                                                    {m.usuario && <div style={{ color: '#CBD5E1', fontSize: 10, marginTop: 2 }}>por {m.usuario}</div>}
+                                                </td>
+                                                <td style={{ padding: '7px 10px', fontWeight: 700, color: isEntrada ? '#16A34A' : '#DC2626', whiteSpace: 'nowrap' }}>
+                                                    {isEntrada ? '+' : '−'}{Number(m.cantidad).toFixed(2)}
+                                                </td>
+                                                <td style={{ padding: '7px 10px', color: '#64748B', whiteSpace: 'nowrap' }}>
+                                                    S/ {Number(m.precio_unitario).toFixed(4)}
+                                                </td>
+                                                <td style={{ padding: '7px 10px', color: '#64748B', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                                    S/ {Number(m.subtotal).toFixed(2)}
+                                                </td>
+                                                <td style={{ padding: '7px 10px', fontWeight: 800, color: '#1E293B', whiteSpace: 'nowrap' }}>
+                                                    {Number(m.saldo).toFixed(2)}
+                                                </td>
+                                                <td style={{ padding: '7px 10px' }}>
+                                                    <span style={{
+                                                        backgroundColor: m.activo ? '#F0FDF4' : '#FEF2F2',
+                                                        color:           m.activo ? '#16A34A' : '#DC2626',
+                                                        padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700,
+                                                    }}>
+                                                        {m.activo ? 'Activo' : 'Anulado'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <p style={{ fontSize: 11, color: '#94A3B8', marginTop: 8 }}>
+                            El saldo acumulado considera únicamente movimientos activos. Los anulados se muestran en gris.
+                        </p>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+                            <Button variant="cancel" size="md" onClick={() => setKardex(null)}>Cerrar</Button>
+                        </div>
+                    </div>
+                </Modal>
             )}
         </AuthenticatedLayout>
     );

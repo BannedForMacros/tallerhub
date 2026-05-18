@@ -95,7 +95,8 @@ Route::middleware('auth')->group(function () {
     Route::patch ('/almacen/salidas/{salidaAlmacen}/toggle',[SalidaAlmacenController::class, 'toggleActivo'])->name('almacen.salidas.toggle');
 
     // Inventario
-    Route::get('/almacen/inventario', [InventarioController::class, 'index'])->name('almacen.inventario.index');
+    Route::get('/almacen/inventario',                     [InventarioController::class, 'index'])->name('almacen.inventario.index');
+    Route::get('/almacen/inventario/{inventario}/kardex', [InventarioController::class, 'kardex'])->name('almacen.inventario.kardex');
 
     // VENTAS
     Route::get   ('/ventas',               [VentaController::class, 'index'])->name('ventas.index');
