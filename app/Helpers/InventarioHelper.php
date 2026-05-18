@@ -195,161 +195,165 @@ class InventarioHelper
 
     /**
      * Corrige el campo stock de la tabla inventario para que coincida con el
-     * calculado desde los movimientos reales. Para recuperación de datos.
+     * total real calculado desde los movimientos. Si la fila inventario no
+     * existe la crea. Garantiza self-healing ante datos históricos inconsistentes.
      */
     public static function sincronizarStockDesdeMovimientos(
         int $empresaId,
         int $localId,
         int $productoId,
         int $unidadMedidaId
-    ): void {
+    ): float {
         $stockReal = self::recalcularStockReal($empresaId, $localId, $productoId, $unidadMedidaId);
+        $stockFinal = max(0, $stockReal);
 
-        Inventario::where('empresa_id', $empresaId)
+        $inv = Inventario::where('empresa_id', $empresaId)
             ->where('local_id', $localId)
             ->where('producto_id', $productoId)
             ->where('unidad_medida_id', $unidadMedidaId)
-            ->update(['stock' => max(0, $stockReal)]);
+            ->first();
+
+        if ($inv) {
+            $inv->update(['stock' => $stockFinal]);
+        } else {
+            Inventario::create([
+                'empresa_id'       => $empresaId,
+                'local_id'         => $localId,
+                'producto_id'      => $productoId,
+                'unidad_medida_id' => $unidadMedidaId,
+                'stock'            => $stockFinal,
+                'stock_minimo'     => 0,
+            ]);
+        }
+
+        return $stockFinal;
     }
 
     /**
-     * Anula una entrada de almacén: revierte el stock de cada detalle.
-     * Bloquea la operación si el stock actual no alcanza para revertir
-     * (típicamente porque ya hubo salidas/ventas que consumieron ese lote).
+     * Agrupa los detalles de un movimiento por (producto, unidad) sumando
+     * cantidades. Útil cuando un mismo producto aparece varias veces en una
+     * entrada o salida.
+     */
+    private static function agruparDetallesPorClave(iterable $detalles): array
+    {
+        $agrupado = [];
+        foreach ($detalles as $det) {
+            $k = "{$det->producto_id}:{$det->unidad_medida_id}";
+            $agrupado[$k] = ($agrupado[$k] ?? 0) + (float) $det->cantidad;
+        }
+        return $agrupado;
+    }
+
+    /**
+     * Anula una entrada de almacén. Self-healing: tras marcar la entrada como
+     * inactiva, recalcula el stock de cada producto afectado desde los
+     * movimientos reales, así corrige cualquier desfase histórico en la tabla
+     * inventario. Bloquea si la anulación dejaría algún producto en negativo
+     * (sus unidades ya fueron vendidas/sacadas).
      */
     public static function anularEntrada(EntradaAlmacen $entrada): void
     {
         if (!$entrada->activo) return;
 
         $entrada->loadMissing('detalles');
+        $agrupado = self::agruparDetallesPorClave($entrada->detalles);
 
-        foreach ($entrada->detalles as $det) {
-            $inv = Inventario::where('empresa_id',       $entrada->empresa_id)
-                ->where('local_id',         $entrada->local_id)
-                ->where('producto_id',      $det->producto_id)
-                ->where('unidad_medida_id', $det->unidad_medida_id)
-                ->first();
-
-            $disponible = $inv ? (float) $inv->stock : 0;
-            if ((float) $det->cantidad > $disponible) {
-                $prod = ProductoAlmacen::find($det->producto_id);
+        // Validar que ningún producto quede en negativo cuando se aplique
+        // la anulación. Comparamos contra el stock REAL (no inventario.stock).
+        foreach ($agrupado as $k => $cantidad) {
+            [$productoId, $unidadId] = explode(':', $k);
+            $stockReal = self::recalcularStockReal(
+                $entrada->empresa_id, $entrada->local_id, (int) $productoId, (int) $unidadId
+            );
+            if ($stockReal - $cantidad < -0.00001) {
+                $prod = ProductoAlmacen::find($productoId);
                 throw ValidationException::withMessages([
-                    'stock' => "No se puede anular: el stock actual de '{$prod->nombre}' ({$disponible}) es menor a la cantidad ingresada en esta entrada ({$det->cantidad}). Anule primero las salidas o ventas que consumieron este lote.",
+                    'stock' => "No se puede anular: '{$prod->nombre}' quedaría con stock negativo (stock real actual: {$stockReal}, se restaría: {$cantidad}). Anule primero las salidas o ventas que consumieron este lote.",
                 ]);
             }
         }
 
-        foreach ($entrada->detalles as $det) {
-            Inventario::where('empresa_id',       $entrada->empresa_id)
-                ->where('local_id',         $entrada->local_id)
-                ->where('producto_id',      $det->producto_id)
-                ->where('unidad_medida_id', $det->unidad_medida_id)
-                ->decrement('stock', $det->cantidad);
-        }
-
         $entrada->update(['activo' => false]);
+
+        foreach (array_keys($agrupado) as $k) {
+            [$productoId, $unidadId] = explode(':', $k);
+            self::sincronizarStockDesdeMovimientos(
+                $entrada->empresa_id, $entrada->local_id, (int) $productoId, (int) $unidadId
+            );
+        }
     }
 
     /**
-     * Reactiva una entrada previamente anulada: vuelve a sumar el stock.
+     * Reactiva una entrada previamente anulada. Self-healing.
      */
     public static function reactivarEntrada(EntradaAlmacen $entrada): void
     {
         if ($entrada->activo) return;
 
         $entrada->loadMissing('detalles');
-
-        foreach ($entrada->detalles as $det) {
-            $inv = Inventario::where('empresa_id',       $entrada->empresa_id)
-                ->where('local_id',         $entrada->local_id)
-                ->where('producto_id',      $det->producto_id)
-                ->where('unidad_medida_id', $det->unidad_medida_id)
-                ->first();
-
-            if ($inv) {
-                $inv->increment('stock', $det->cantidad);
-            } else {
-                Inventario::create([
-                    'empresa_id'       => $entrada->empresa_id,
-                    'local_id'         => $entrada->local_id,
-                    'producto_id'      => $det->producto_id,
-                    'unidad_medida_id' => $det->unidad_medida_id,
-                    'stock'            => $det->cantidad,
-                    'stock_minimo'     => 0,
-                ]);
-            }
-        }
+        $agrupado = self::agruparDetallesPorClave($entrada->detalles);
 
         $entrada->update(['activo' => true]);
+
+        foreach (array_keys($agrupado) as $k) {
+            [$productoId, $unidadId] = explode(':', $k);
+            self::sincronizarStockDesdeMovimientos(
+                $entrada->empresa_id, $entrada->local_id, (int) $productoId, (int) $unidadId
+            );
+        }
     }
 
     /**
-     * Anula una salida de almacén: devuelve el stock al inventario.
+     * Anula una salida de almacén: devuelve stock al inventario. Self-healing.
      */
     public static function anularSalida(SalidaAlmacen $salida): void
     {
         if (!$salida->activo) return;
 
         $salida->loadMissing('detalles');
-
-        foreach ($salida->detalles as $det) {
-            $inv = Inventario::where('empresa_id',       $salida->empresa_id)
-                ->where('local_id',         $salida->local_id)
-                ->where('producto_id',      $det->producto_id)
-                ->where('unidad_medida_id', $det->unidad_medida_id)
-                ->first();
-
-            if ($inv) {
-                $inv->increment('stock', $det->cantidad);
-            } else {
-                Inventario::create([
-                    'empresa_id'       => $salida->empresa_id,
-                    'local_id'         => $salida->local_id,
-                    'producto_id'      => $det->producto_id,
-                    'unidad_medida_id' => $det->unidad_medida_id,
-                    'stock'            => $det->cantidad,
-                    'stock_minimo'     => 0,
-                ]);
-            }
-        }
+        $agrupado = self::agruparDetallesPorClave($salida->detalles);
 
         $salida->update(['activo' => false]);
+
+        foreach (array_keys($agrupado) as $k) {
+            [$productoId, $unidadId] = explode(':', $k);
+            self::sincronizarStockDesdeMovimientos(
+                $salida->empresa_id, $salida->local_id, (int) $productoId, (int) $unidadId
+            );
+        }
     }
 
     /**
-     * Reactiva una salida previamente anulada: vuelve a descontar el stock.
-     * Bloquea si el stock actual no alcanza.
+     * Reactiva una salida previamente anulada. Self-healing.
+     * Bloquea si reactivarla dejaría algún producto en negativo.
      */
     public static function reactivarSalida(SalidaAlmacen $salida): void
     {
         if ($salida->activo) return;
 
         $salida->loadMissing('detalles');
+        $agrupado = self::agruparDetallesPorClave($salida->detalles);
 
-        foreach ($salida->detalles as $det) {
-            $inv = Inventario::where('empresa_id',       $salida->empresa_id)
-                ->where('local_id',         $salida->local_id)
-                ->where('producto_id',      $det->producto_id)
-                ->where('unidad_medida_id', $det->unidad_medida_id)
-                ->first();
-
-            $disponible = $inv ? (float) $inv->stock : 0;
-            if ((float) $det->cantidad > $disponible) {
-                $prod = ProductoAlmacen::find($det->producto_id);
+        foreach ($agrupado as $k => $cantidad) {
+            [$productoId, $unidadId] = explode(':', $k);
+            $stockReal = self::recalcularStockReal(
+                $salida->empresa_id, $salida->local_id, (int) $productoId, (int) $unidadId
+            );
+            if ($stockReal - $cantidad < -0.00001) {
+                $prod = ProductoAlmacen::find($productoId);
                 throw ValidationException::withMessages([
-                    'stock' => "Stock insuficiente para reactivar la salida de '{$prod->nombre}'. Disponible: {$disponible}, se necesita: {$det->cantidad}.",
+                    'stock' => "Stock insuficiente para reactivar la salida de '{$prod->nombre}'. Stock real disponible: {$stockReal}, se necesita: {$cantidad}.",
                 ]);
             }
         }
 
-        foreach ($salida->detalles as $det) {
-            Inventario::where('empresa_id',       $salida->empresa_id)
-                ->where('local_id',         $salida->local_id)
-                ->where('producto_id',      $det->producto_id)
-                ->where('unidad_medida_id', $det->unidad_medida_id)
-                ->decrement('stock', $det->cantidad);
-        }
-
         $salida->update(['activo' => true]);
+
+        foreach (array_keys($agrupado) as $k) {
+            [$productoId, $unidadId] = explode(':', $k);
+            self::sincronizarStockDesdeMovimientos(
+                $salida->empresa_id, $salida->local_id, (int) $productoId, (int) $unidadId
+            );
+        }
     }
 }

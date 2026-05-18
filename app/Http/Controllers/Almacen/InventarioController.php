@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Almacen;
 
+use App\Helpers\InventarioHelper;
 use App\Http\Controllers\Controller;
 use App\Models\EntradaAlmacenDetalle;
 use App\Models\Inventario;
@@ -164,6 +165,32 @@ class InventarioController extends Controller
                 'stock_minimo'   => (float) $inventario->stock_minimo,
             ],
             'movimientos' => $movimientos,
+        ]);
+    }
+
+    /**
+     * Recalcula el campo `inventario.stock` desde los movimientos reales para
+     * un único ítem. Sirve para corregir desfases dejados por bugs históricos
+     * (p. ej. anular-sin-recalcular antes del fix de toggleActivo).
+     */
+    public function resincronizar(Inventario $inventario)
+    {
+        $user = auth()->user();
+        if (!$user->esSuperAdmin() && $inventario->empresa_id !== $user->empresa_id) abort(403);
+
+        $stockAnterior = (float) $inventario->stock;
+
+        $stockNuevo = InventarioHelper::sincronizarStockDesdeMovimientos(
+            $inventario->empresa_id,
+            $inventario->local_id,
+            $inventario->producto_id,
+            $inventario->unidad_medida_id,
+        );
+
+        return response()->json([
+            'stock_anterior' => $stockAnterior,
+            'stock_nuevo'    => $stockNuevo,
+            'diferencia'     => round($stockNuevo - $stockAnterior, 4),
         ]);
     }
 }

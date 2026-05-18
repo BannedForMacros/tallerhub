@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import axios from 'axios';
-import { Layers, AlertTriangle, TrendingDown, History, ArrowDownCircle, ArrowUpCircle, ExternalLink } from 'lucide-react';
+import { toast, Toaster } from 'react-hot-toast';
+import { Layers, AlertTriangle, TrendingDown, History, ArrowDownCircle, ArrowUpCircle, ExternalLink, RefreshCw } from 'lucide-react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Modal from '@/Components/Modal';
 import Button from '@/Components/Button';
@@ -68,18 +69,45 @@ export default function InventarioIndex({ inventario, locales, categorias, empre
     const [kardex,        setKardex]        = useState<KardexData | null>(null);
     const [kardexLoading, setKardexLoading] = useState(false);
     const [kardexError,   setKardexError]   = useState<string | null>(null);
+    const [resyncLoading, setResyncLoading] = useState(false);
 
-    const abrirKardex = async (inv: Inventario) => {
-        setKardex({ inventario: { id: inv.id, producto: null, unidad_medida: null, local: null, stock: 0, stock_minimo: 0 }, movimientos: [] });
+    const cargarKardex = async (id: number) => {
         setKardexLoading(true);
         setKardexError(null);
         try {
-            const { data } = await axios.get<KardexData>(route('almacen.inventario.kardex', inv.id));
+            const { data } = await axios.get<KardexData>(route('almacen.inventario.kardex', id));
             setKardex(data);
         } catch (e: any) {
             setKardexError(e?.response?.data?.message ?? 'No se pudo cargar el kárdex.');
         } finally {
             setKardexLoading(false);
+        }
+    };
+
+    const abrirKardex = (inv: Inventario) => {
+        setKardex({ inventario: { id: inv.id, producto: null, unidad_medida: null, local: null, stock: 0, stock_minimo: 0 }, movimientos: [] });
+        cargarKardex(inv.id);
+    };
+
+    const recalcularStock = async () => {
+        if (!kardex) return;
+        const id = kardex.inventario.id;
+        setResyncLoading(true);
+        try {
+            const { data } = await axios.post<{ stock_anterior: number; stock_nuevo: number; diferencia: number }>(
+                route('almacen.inventario.resincronizar', id)
+            );
+            const diff = Number(data.diferencia);
+            const msg = Math.abs(diff) < 0.0001
+                ? `Stock ya estaba correcto: ${Number(data.stock_nuevo).toFixed(2)}.`
+                : `Stock corregido: ${Number(data.stock_anterior).toFixed(2)} → ${Number(data.stock_nuevo).toFixed(2)} (${diff > 0 ? '+' : ''}${diff.toFixed(2)}).`;
+            toast.success(msg, { duration: 5000 });
+            await cargarKardex(id);
+            router.reload({ only: ['inventario'] });
+        } catch (e: any) {
+            toast.error(e?.response?.data?.message ?? 'No se pudo recalcular el stock.');
+        } finally {
+            setResyncLoading(false);
         }
     };
 
@@ -120,6 +148,7 @@ export default function InventarioIndex({ inventario, locales, categorias, empre
     return (
         <AuthenticatedLayout>
             <Head title="Inventario" />
+            <Toaster position="top-right" />
 
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
@@ -462,9 +491,27 @@ export default function InventarioIndex({ inventario, locales, categorias, empre
 
                         <p style={{ fontSize: 11, color: '#94A3B8', marginTop: 8 }}>
                             El saldo acumulado considera únicamente movimientos activos. Los anulados se muestran en gris.
+                            Si el "Stock actual" arriba no coincide con el último saldo, usa <strong>Recalcular stock real</strong> para corregirlo desde los movimientos.
                         </p>
 
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, gap: 8, flexWrap: 'wrap' }}>
+                            <button
+                                onClick={recalcularStock}
+                                disabled={resyncLoading || kardexLoading}
+                                style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                                    padding: '9px 14px', borderRadius: 10,
+                                    border: '1.5px solid #2563EB',
+                                    backgroundColor: resyncLoading ? '#EFF6FF' : '#fff',
+                                    color: '#2563EB', cursor: resyncLoading ? 'wait' : 'pointer',
+                                    fontSize: 13, fontWeight: 700,
+                                    opacity: (resyncLoading || kardexLoading) ? 0.6 : 1,
+                                }}
+                                title="Reemplaza inventario.stock por el cálculo desde los movimientos activos"
+                            >
+                                <RefreshCw size={14} className={resyncLoading ? 'animate-spin' : ''} />
+                                {resyncLoading ? 'Recalculando…' : 'Recalcular stock real'}
+                            </button>
                             <Button variant="cancel" size="md" onClick={() => setKardex(null)}>Cerrar</Button>
                         </div>
                     </div>
