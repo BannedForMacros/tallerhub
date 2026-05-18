@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /home/bannedformacros/Proyectos/tallerhub -type f \\\\\\(-name *service* -o -name *servicio* \\\\\\))",
+      "Bash(php artisan:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)",
+      "Bash(grep -v \"^$\")",
+      "Bash(grep -r \"class.*extends Model\" /home/bannedformacros/Proyectos/tallerhub/app/Models/*.php)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(list\\(d.get\\('dependencies',{}\\).keys\\(\\)\\)\\)\")",
+      "Bash(npm install:*)",
+      "Bash(sed -i \"s|const hoy = \\(\\) => new Date\\(\\).toISOString\\(\\).split\\('T'\\)\\\\[0\\\\];|import { fechaHoy } from '@\\\\/helpers\\\\/fecha';\\\\nconst hoy = fechaHoy;|\" /home/bannedformacros/Proyectos/tallerhub/resources/js/Pages/Gastos/Create.tsx)",
+      "Bash(sed -i \"s|import EntradaForm|import { fechaHoy } from '@\\\\/helpers\\\\/fecha';\\\\nimport EntradaForm|\" /home/bannedformacros/Proyectos/tallerhub/resources/js/Pages/Almacen/Entradas/Create.tsx)",
+      "Bash(sed -i \"s|new Date\\(\\).toISOString\\(\\).split\\('T'\\)\\\\[0\\\\]|fechaHoy\\(\\)|g\" /home/bannedformacros/Proyectos/tallerhub/resources/js/Pages/Almacen/Entradas/Create.tsx)",
+      "Bash(sed -i \"s|import SalidaForm|import { fechaHoy } from '@\\\\/helpers\\\\/fecha';\\\\nimport SalidaForm|\" /home/bannedformacros/Proyectos/tallerhub/resources/js/Pages/Almacen/Salidas/Create.tsx)",
+      "Bash(sed -i \"s|new Date\\(\\).toISOString\\(\\).split\\('T'\\)\\\\[0\\\\]|fechaHoy\\(\\)|g\" /home/bannedformacros/Proyectos/tallerhub/resources/js/Pages/Almacen/Salidas/Create.tsx)",
+      "Bash(php -l /home/bannedformacros/Proyectos/tallerhub/app/Http/Controllers/VentaController.php)",
+      "Bash(php -l /home/bannedformacros/Proyectos/tallerhub/app/Helpers/InventarioHelper.php)",
+      "Bash(php *)",
+      "Bash(python3 *)",
+      "Bash(powershell *)"
+    ]
+  }
+}

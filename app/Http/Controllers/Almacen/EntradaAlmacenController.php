@@ -11,6 +11,7 @@ use App\Models\Local;
 use App\Models\Empresa;
 use App\Models\Correlativo;
 use App\Helpers\FechaHelper;
+use App\Helpers\InventarioHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -268,7 +269,21 @@ class EntradaAlmacenController extends Controller
 
     public function toggleActivo(EntradaAlmacen $entradaAlmacen)
     {
-        $entradaAlmacen->update(['activo' => !$entradaAlmacen->activo]);
-        return back()->with('success', 'Estado actualizado.');
+        $user = auth()->user();
+        if (!$user->esSuperAdmin() && $entradaAlmacen->empresa_id !== $user->empresa_id) abort(403);
+
+        $wasActive = (bool) $entradaAlmacen->activo;
+
+        DB::transaction(function () use ($entradaAlmacen, $wasActive) {
+            if ($wasActive) {
+                InventarioHelper::anularEntrada($entradaAlmacen);
+            } else {
+                InventarioHelper::reactivarEntrada($entradaAlmacen);
+            }
+        });
+
+        return back()->with('success', $wasActive
+            ? 'Entrada anulada y stock recalculado.'
+            : 'Entrada reactivada y stock recalculado.');
     }
 }

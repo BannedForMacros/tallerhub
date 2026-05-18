@@ -2,12 +2,14 @@
 namespace App\Helpers;
 
 use App\Models\Correlativo;
+use App\Models\EntradaAlmacen;
 use App\Models\EntradaAlmacenDetalle;
 use App\Models\Inventario;
 use App\Models\ProductoAlmacen;
 use App\Models\SalidaAlmacen;
 use App\Models\SalidaAlmacenDetalle;
 use App\Models\Venta;
+use Illuminate\Validation\ValidationException;
 
 class InventarioHelper
 {
@@ -87,9 +89,9 @@ class InventarioHelper
             $disponible = $inv ? (float) $inv->stock : 0;
             if ($delta > $disponible) {
                 $prod = ProductoAlmacen::find($productoId);
-                throw new \Exception(
-                    "Stock insuficiente para '{$prod->nombre}'. Disponible: {$disponible}, se necesita adicionar: {$delta}."
-                );
+                throw ValidationException::withMessages([
+                    'stock' => "Stock insuficiente para '{$prod->nombre}'. Disponible: {$disponible}, se necesita: {$delta}.",
+                ]);
             }
         }
 
@@ -208,5 +210,146 @@ class InventarioHelper
             ->where('producto_id', $productoId)
             ->where('unidad_medida_id', $unidadMedidaId)
             ->update(['stock' => max(0, $stockReal)]);
+    }
+
+    /**
+     * Anula una entrada de almacén: revierte el stock de cada detalle.
+     * Bloquea la operación si el stock actual no alcanza para revertir
+     * (típicamente porque ya hubo salidas/ventas que consumieron ese lote).
+     */
+    public static function anularEntrada(EntradaAlmacen $entrada): void
+    {
+        if (!$entrada->activo) return;
+
+        $entrada->loadMissing('detalles');
+
+        foreach ($entrada->detalles as $det) {
+            $inv = Inventario::where('empresa_id',       $entrada->empresa_id)
+                ->where('local_id',         $entrada->local_id)
+                ->where('producto_id',      $det->producto_id)
+                ->where('unidad_medida_id', $det->unidad_medida_id)
+                ->first();
+
+            $disponible = $inv ? (float) $inv->stock : 0;
+            if ((float) $det->cantidad > $disponible) {
+                $prod = ProductoAlmacen::find($det->producto_id);
+                throw ValidationException::withMessages([
+                    'stock' => "No se puede anular: el stock actual de '{$prod->nombre}' ({$disponible}) es menor a la cantidad ingresada en esta entrada ({$det->cantidad}). Anule primero las salidas o ventas que consumieron este lote.",
+                ]);
+            }
+        }
+
+        foreach ($entrada->detalles as $det) {
+            Inventario::where('empresa_id',       $entrada->empresa_id)
+                ->where('local_id',         $entrada->local_id)
+                ->where('producto_id',      $det->producto_id)
+                ->where('unidad_medida_id', $det->unidad_medida_id)
+                ->decrement('stock', $det->cantidad);
+        }
+
+        $entrada->update(['activo' => false]);
+    }
+
+    /**
+     * Reactiva una entrada previamente anulada: vuelve a sumar el stock.
+     */
+    public static function reactivarEntrada(EntradaAlmacen $entrada): void
+    {
+        if ($entrada->activo) return;
+
+        $entrada->loadMissing('detalles');
+
+        foreach ($entrada->detalles as $det) {
+            $inv = Inventario::where('empresa_id',       $entrada->empresa_id)
+                ->where('local_id',         $entrada->local_id)
+                ->where('producto_id',      $det->producto_id)
+                ->where('unidad_medida_id', $det->unidad_medida_id)
+                ->first();
+
+            if ($inv) {
+                $inv->increment('stock', $det->cantidad);
+            } else {
+                Inventario::create([
+                    'empresa_id'       => $entrada->empresa_id,
+                    'local_id'         => $entrada->local_id,
+                    'producto_id'      => $det->producto_id,
+                    'unidad_medida_id' => $det->unidad_medida_id,
+                    'stock'            => $det->cantidad,
+                    'stock_minimo'     => 0,
+                ]);
+            }
+        }
+
+        $entrada->update(['activo' => true]);
+    }
+
+    /**
+     * Anula una salida de almacén: devuelve el stock al inventario.
+     */
+    public static function anularSalida(SalidaAlmacen $salida): void
+    {
+        if (!$salida->activo) return;
+
+        $salida->loadMissing('detalles');
+
+        foreach ($salida->detalles as $det) {
+            $inv = Inventario::where('empresa_id',       $salida->empresa_id)
+                ->where('local_id',         $salida->local_id)
+                ->where('producto_id',      $det->producto_id)
+                ->where('unidad_medida_id', $det->unidad_medida_id)
+                ->first();
+
+            if ($inv) {
+                $inv->increment('stock', $det->cantidad);
+            } else {
+                Inventario::create([
+                    'empresa_id'       => $salida->empresa_id,
+                    'local_id'         => $salida->local_id,
+                    'producto_id'      => $det->producto_id,
+                    'unidad_medida_id' => $det->unidad_medida_id,
+                    'stock'            => $det->cantidad,
+                    'stock_minimo'     => 0,
+                ]);
+            }
+        }
+
+        $salida->update(['activo' => false]);
+    }
+
+    /**
+     * Reactiva una salida previamente anulada: vuelve a descontar el stock.
+     * Bloquea si el stock actual no alcanza.
+     */
+    public static function reactivarSalida(SalidaAlmacen $salida): void
+    {
+        if ($salida->activo) return;
+
+        $salida->loadMissing('detalles');
+
+        foreach ($salida->detalles as $det) {
+            $inv = Inventario::where('empresa_id',       $salida->empresa_id)
+                ->where('local_id',         $salida->local_id)
+                ->where('producto_id',      $det->producto_id)
+                ->where('unidad_medida_id', $det->unidad_medida_id)
+                ->first();
+
+            $disponible = $inv ? (float) $inv->stock : 0;
+            if ((float) $det->cantidad > $disponible) {
+                $prod = ProductoAlmacen::find($det->producto_id);
+                throw ValidationException::withMessages([
+                    'stock' => "Stock insuficiente para reactivar la salida de '{$prod->nombre}'. Disponible: {$disponible}, se necesita: {$det->cantidad}.",
+                ]);
+            }
+        }
+
+        foreach ($salida->detalles as $det) {
+            Inventario::where('empresa_id',       $salida->empresa_id)
+                ->where('local_id',         $salida->local_id)
+                ->where('producto_id',      $det->producto_id)
+                ->where('unidad_medida_id', $det->unidad_medida_id)
+                ->decrement('stock', $det->cantidad);
+        }
+
+        $salida->update(['activo' => true]);
     }
 }

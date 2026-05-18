@@ -2,7 +2,7 @@ import { formatFecha } from '@/helpers/fecha';
 import { useState } from 'react';
 import { router } from '@inertiajs/react';
 import { toast, Toaster } from 'react-hot-toast';
-import { Plus, Trash2, Eye, Pencil } from 'lucide-react';
+import { Plus, Trash2, Eye, Pencil, RotateCcw } from 'lucide-react';
 import { Head, Link } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Table from '@/Components/Table';

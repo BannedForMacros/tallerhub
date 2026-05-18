@@ -38,7 +38,10 @@ export default function VentasCreate({ empresas, locales, clientes, servicios, p
 
     const guardar = () => {
         post(route('ventas.store'), {
-            onError: () => toast.error('Revisa los campos requeridos.'),
+            onError: (errs) => {
+                if (errs.stock) toast.error(errs.stock);
+                else toast.error('Revisa los campos requeridos.');
+            },
         });
     };
 

@@ -55,7 +55,10 @@ export default function VentasEdit({ venta, empresas, locales, clientes, servici
 
     const guardar = () => {
         put(route('ventas.update', venta.id), {
-            onError: () => toast.error('Revisa los campos requeridos.'),
+            onError: (errs) => {
+                if (errs.stock) toast.error(errs.stock);
+                else toast.error('Revisa los campos requeridos.');
+            },
         });
     };
 

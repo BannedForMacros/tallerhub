@@ -11,6 +11,7 @@ use App\Models\Local;
 use App\Models\Empresa;
 use App\Models\Correlativo;
 use App\Helpers\FechaHelper;
+use App\Helpers\InventarioHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -297,7 +298,25 @@ class SalidaAlmacenController extends Controller
 
     public function toggleActivo(SalidaAlmacen $salidaAlmacen)
     {
-        $salidaAlmacen->update(['activo' => !$salidaAlmacen->activo]);
-        return back()->with('success', 'Estado actualizado.');
+        $user = auth()->user();
+        if (!$user->esSuperAdmin() && $salidaAlmacen->empresa_id !== $user->empresa_id) abort(403);
+
+        if ($salidaAlmacen->tipo === 'venta') {
+            return back()->with('error', 'Las salidas de tipo venta se gestionan desde el módulo de ventas.');
+        }
+
+        $wasActive = (bool) $salidaAlmacen->activo;
+
+        DB::transaction(function () use ($salidaAlmacen, $wasActive) {
+            if ($wasActive) {
+                InventarioHelper::anularSalida($salidaAlmacen);
+            } else {
+                InventarioHelper::reactivarSalida($salidaAlmacen);
+            }
+        });
+
+        return back()->with('success', $wasActive
+            ? 'Salida anulada y stock recalculado.'
+            : 'Salida reactivada y stock recalculado.');
     }
 }
