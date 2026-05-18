@@ -21,7 +21,9 @@
       "Bash(powershell *)",
       "Bash(npx --yes typescript@5 tsc --noEmit)",
       "Bash(cmd /c \"npx tsc --noEmit\")",
-      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 80)"
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 80)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
