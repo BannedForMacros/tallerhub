@@ -9,6 +9,19 @@ interface Column<T> {
     searchable?: boolean; // columnas que participan en la búsqueda
 }
 
+const normalizar = (s: string) =>
+    s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+
+// Junta en un solo texto los valores del objeto y de sus relaciones (hasta 2 niveles)
+const textoBuscable = (val: unknown, nivel = 0): string => {
+    if (val === null || val === undefined) return '';
+    if (typeof val !== 'object') return String(val);
+    if (nivel >= 3) return '';
+    return Object.values(val as Record<string, unknown>)
+        .map(v => textoBuscable(v, nivel + 1))
+        .join(' ');
+};
+
 interface Props<T> {
     columns: Column<T>[];
     data: T[];
@@ -27,14 +40,15 @@ export default function Table<T extends { id: number }>({
     const [page, setPage]     = useState(1);
     const [query, setQuery]   = useState('');
 
-    // Filtro de búsqueda — busca en todos los valores string del objeto
-    const filtered = query.trim() === ''
+    // Filtro de búsqueda — busca en todos los valores del objeto, incluidas
+    // relaciones anidadas (ej. recepcion.cliente.nombre), sin tildes y por palabras
+    const tokens = normalizar(query).split(/\s+/).filter(Boolean);
+    const filtered = tokens.length === 0
         ? data
-        : data.filter(row =>
-            Object.values(row as Record<string, unknown>).some(val =>
-                String(val ?? '').toLowerCase().includes(query.toLowerCase())
-            )
-        );
+        : data.filter(row => {
+            const texto = normalizar(textoBuscable(row));
+            return tokens.every(t => texto.includes(t));
+        });
 
     const total      = filtered.length;
     const totalPages = Math.ceil(total / perPage);
