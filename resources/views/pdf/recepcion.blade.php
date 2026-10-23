@@ -92,7 +92,6 @@
                     @endif
                 </td>
                 <td class="empresa-cell">
-                    <h1>{{ $recepcion->empresa->nombre }}</h1>
                     <p>RUC: {{ $recepcion->empresa->ruc }}</p>
                     @if($recepcion->empresa->telefono)
                         <p>Telf.: {{ $recepcion->empresa->telefono }}</p>
