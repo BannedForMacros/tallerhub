@@ -9,6 +9,7 @@ use App\Models\Venta;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use App\Helpers\LogoHelper;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class CierreCajaController extends Controller
@@ -301,17 +302,9 @@ class CierreCajaController extends Controller
             ->orderByDesc('id')
             ->get();
 
-        $logoBase64 = null;
-        if ($cierreCaja->empresa->logo) {
-            $logoPath = storage_path('app/public/' . $cierreCaja->empresa->logo);
-            if (file_exists($logoPath)) {
-                $ext        = pathinfo($logoPath, PATHINFO_EXTENSION);
-                $mime       = $ext === 'png' ? 'image/png' : 'image/jpeg';
-                $logoBase64 = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($logoPath));
-            }
-        }
+        $logo = LogoHelper::paraPdf($cierreCaja->empresa->logo);
 
-        $pdf = Pdf::loadView('pdf.cierre_caja', compact('cierreCaja', 'ventas', 'logoBase64'))
+        $pdf = Pdf::loadView('pdf.cierre_caja', compact('cierreCaja', 'ventas', 'logo'))
             ->setPaper('a4', 'portrait');
 
         return $pdf->stream('cierre-caja-' . $cierreCaja->fecha->format('Y-m-d') . '.pdf');

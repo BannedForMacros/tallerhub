@@ -9,6 +9,7 @@ use App\Models\Empresa;
 use App\Models\Correlativo;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Helpers\LogoHelper;
 use Barryvdh\DomPDF\Facade\Pdf;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use BaconQrCode\Renderer\ImageRenderer;
@@ -125,17 +126,9 @@ class RecepcionController extends Controller
         $writer       = new Writer($renderer);
         $qrBase64     = base64_encode($writer->writeString($urlRecepcion));
 
-        $logoBase64 = null;
-        if ($recepcion->empresa->logo) {
-            $logoPath = storage_path('app/public/' . $recepcion->empresa->logo);
-            if (file_exists($logoPath)) {
-                $ext        = pathinfo($logoPath, PATHINFO_EXTENSION);
-                $mime       = $ext === 'png' ? 'image/png' : 'image/jpeg';
-                $logoBase64 = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($logoPath));
-            }
-        }
+        $logo = LogoHelper::paraPdf($recepcion->empresa->logo);
 
-        $pdf = Pdf::loadView('pdf.recepcion', compact('recepcion', 'qrBase64', 'logoBase64'))
+        $pdf = Pdf::loadView('pdf.recepcion', compact('recepcion', 'qrBase64', 'logo'))
             ->setPaper('a4', 'portrait');
 
         return $pdf->stream('recepcion-' . $recepcion->codigo . '.pdf');

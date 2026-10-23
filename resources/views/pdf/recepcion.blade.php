@@ -12,7 +12,6 @@
         .header table { width: 100%; }
         .header td { vertical-align: middle; }
         .header .logo-cell { width: 120px; }
-        .header .logo-cell img { max-height: 65px; max-width: 110px; }
         .header .logo-cell .sin-logo {
             width: 65px; height: 65px; border: 2px solid #000;
             font-size: 24px; font-weight: 900; color: #000;
@@ -85,9 +84,9 @@
     <div class="header">
         <table>
             <tr>
-                <td class="logo-cell">
-                    @if($logoBase64)
-                        <img src="{{ $logoBase64 }}" alt="Logo">
+                <td class="logo-cell"@if($logo) style="width: {{ $logo['width'] + 12 }}px;"@endif>
+                    @if($logo)
+                        <img src="{{ $logo['src'] }}" alt="Logo" style="width: {{ $logo['width'] }}px; height: {{ $logo['height'] }}px;">
                     @else
                         <div class="sin-logo">{{ strtoupper(substr($recepcion->empresa->nombre, 0, 1)) }}</div>
                     @endif
