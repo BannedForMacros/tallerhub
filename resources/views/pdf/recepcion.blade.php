@@ -18,7 +18,7 @@
             text-align: center; line-height: 65px;
         }
         .header .empresa-cell { text-align: center; padding: 0 10px; }
-        .header .empresa-cell h1 { font-size: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
+        .header .empresa-cell h1 { font-size: 16px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
         .header .empresa-cell p { font-size: 10px; margin-top: 2px; }
         .header .codigo-cell { text-align: right; width: 130px; }
         .header .codigo-cell .titulo-doc { font-size: 9px; font-weight: 700; text-transform: uppercase; border: 1px solid #000; padding: 3px 6px; margin-bottom: 4px; }
@@ -92,7 +92,6 @@
                     @endif
                 </td>
                 <td class="empresa-cell">
-                    <div style="font-size:16px; font-weight:900; text-transform:uppercase; letter-spacing:1px;">L&amp;G Servicio Técnico Especializado</div>
                     <h1>{{ $recepcion->empresa->nombre }}</h1>
                     <p>RUC: {{ $recepcion->empresa->ruc }}</p>
                     @if($recepcion->empresa->telefono)
