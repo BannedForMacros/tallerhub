@@ -1,5 +1,5 @@
 import { formatFecha } from '@/helpers/fecha';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useForm, usePage, router } from '@inertiajs/react';
 import { toast, Toaster } from 'react-hot-toast';
 import { Plus, Pencil, Trash2, RotateCcw, FileText } from 'lucide-react';
@@ -11,6 +11,7 @@ import Badge from '@/Components/Badge';
 import Button from '@/Components/Button';
 import InputField from '@/Components/InputField';
 import SelectField from '@/Components/SelectField';
+import SearchableSelectField from '@/Components/SearchableSelectField';
 import ActionButton from '@/Components/ActionButton';
 import ClienteForm from '@/Components/ClienteForm';
 import { PageProps, Recepcion, Cliente, Local, Usuario, Empresa, ClienteFormData } from '@/types';
@@ -88,6 +89,46 @@ export default function RecepcionesIndex({ recepciones, empresas, clientes, loca
             : tecnicos
     , [form.data.empresa_id, tecnicos]);
 
+    // Si la empresa tiene un solo local, se selecciona solo
+    useEffect(() => {
+        if (modal && !form.data.local_id && localesFiltrados.length === 1) {
+            form.setData('local_id', String(localesFiltrados[0].id));
+        }
+    }, [modal, localesFiltrados]);
+
+    // Sugerencias de autocompletado a partir de recepciones anteriores
+    const sugerencias = useMemo(() => {
+        const unicos = (vals: (string | null | undefined)[]) =>
+            [...new Set(vals.map(v => v?.trim()).filter((v): v is string => !!v))].sort();
+        return {
+            tipo_equipo: unicos(recepciones.map(r => r.tipo_equipo)),
+            marca:       unicos(recepciones.map(r => r.marca)),
+            modelo:      unicos(recepciones.map(r => r.modelo)),
+            accesorios:  unicos(recepciones.map(r => r.accesorios)),
+        };
+    }, [recepciones]);
+
+    const opcionesCliente = useMemo(() => clientesFiltrados.map(c => ({
+        value:    c.id,
+        label:    c.nombre,
+        sublabel: [c.dni, c.telefono].filter(Boolean).join(' · ') || undefined,
+        keywords: [c.email, c.direccion].filter(Boolean).join(' '),
+    })), [clientesFiltrados]);
+
+    // Abre "Nuevo cliente" con lo que se escribió en el buscador
+    const crearClienteDesdeBusqueda = (query: string) => {
+        const esDocumento = /^\d{8}$|^\d{11}$/.test(query);
+        formCliente.reset();
+        formCliente.setData(prev => ({
+            ...prev,
+            nombre:         esDocumento ? '' : query,
+            dni:            esDocumento ? query : '',
+            tipo_documento: esDocumento && query.length === 11 ? 'RUC' : 'DNI',
+            empresa_id:     form.data.empresa_id,
+        }));
+        setModalCliente(true);
+    };
+
     const limpiarFiltrosDependientes = () => {
         form.setData(prev => ({
             ...prev,
@@ -140,8 +181,15 @@ export default function RecepcionesIndex({ recepciones, empresas, clientes, loca
             onSuccess: () => {
                 setModalCliente(false);
                 formCliente.reset();
-                toast.success('Cliente creado. Ya puedes seleccionarlo.');
-                router.reload({ only: ['clientes'] });
+                toast.success('Cliente creado y seleccionado.');
+                router.reload({
+                    only: ['clientes'],
+                    onSuccess: (page) => {
+                        const lista = (page.props as unknown as Props).clientes;
+                        const nuevo = lista.reduce<Cliente | null>((max, c) => (!max || c.id > max.id ? c : max), null);
+                        if (nuevo) form.setData('cliente_id', String(nuevo.id));
+                    },
+                });
             },
         });
     };
@@ -293,7 +341,7 @@ export default function RecepcionesIndex({ recepciones, empresas, clientes, loca
                         {/* Empresa — solo superadmin */}
                         {esSuperAdmin && (
                             <div style={{ gridColumn: '1 / -1' }}>
-                                <SelectField
+                                <SearchableSelectField
                                     label="Empresa" name="empresa_id" value={form.data.empresa_id}
                                     onChange={e => {
                                         form.setData('empresa_id', e.target.value);
@@ -301,6 +349,7 @@ export default function RecepcionesIndex({ recepciones, empresas, clientes, loca
                                     }}
                                     options={empresas.map(e => ({ value: e.id, label: e.nombre }))}
                                     placeholder="Selecciona empresa" error={form.errors.empresa_id} required
+                                    searchPlaceholder="Buscar empresa..."
                                 />
                             </div>
                         )}
@@ -308,49 +357,57 @@ export default function RecepcionesIndex({ recepciones, empresas, clientes, loca
                         {/* Cliente con botón crear rápido */}
                         <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'flex-end', gap: 8 }}>
                             <div style={{ flex: 1 }}>
-                                <SelectField
+                                <SearchableSelectField
                                     label="Cliente" name="cliente_id" value={form.data.cliente_id}
                                     onChange={e => form.setData('cliente_id', e.target.value)}
-                                    options={clientesFiltrados.map(c => ({
-                                        value: c.id,
-                                        label: `${c.nombre}${c.dni ? ' — ' + c.dni : ''}`,
-                                    }))}
+                                    options={opcionesCliente}
                                     placeholder="Selecciona cliente" error={form.errors.cliente_id} required
+                                    searchPlaceholder="Buscar por nombre, DNI/RUC, teléfono o email..."
+                                    onCreate={crearClienteDesdeBusqueda}
+                                    createLabel="Crear cliente"
                                 />
                             </div>
                             <div style={{ marginBottom: 18 }}>
-                                <Button variant="primary" size="md" icon={<Plus size={14} />} onClick={() => setModalCliente(true)}>
+                                <Button variant="primary" size="md" icon={<Plus size={14} />} onClick={() => crearClienteDesdeBusqueda('')}>
                                     Nuevo
                                 </Button>
                             </div>
                         </div>
 
-                        <SelectField
+                        <SearchableSelectField
                             label="Local" name="local_id" value={form.data.local_id}
                             onChange={e => form.setData('local_id', e.target.value)}
                             options={localesFiltrados.map(l => ({ value: l.id, label: l.nombre }))}
                             placeholder="Selecciona local" error={form.errors.local_id} required
+                            searchPlaceholder="Buscar local..."
                         />
-                        <SelectField
+                        <SearchableSelectField
                             label="Técnico asignado" name="user_id" value={form.data.user_id}
                             onChange={e => form.setData('user_id', e.target.value)}
-                            options={tecnicosFiltrados.map(t => ({ value: t.id, label: t.name }))}
+                            options={tecnicosFiltrados.map(t => ({
+                                value: t.id, label: t.name,
+                                sublabel: t.rol?.nombre, keywords: `${t.email ?? ''} ${t.local?.nombre ?? ''}`,
+                            }))}
                             placeholder="Sin asignar" error={form.errors.user_id}
+                            searchPlaceholder="Buscar técnico..."
                         />
 
                         <InputField
                             label="Tipo de equipo" name="tipo_equipo" value={form.data.tipo_equipo}
                             onChange={e => form.setData('tipo_equipo', e.target.value)}
+                            list="sug-tipo_equipo"
                             error={form.errors.tipo_equipo} required placeholder="Ej. Laptop, Celular, TV"
                         />
                         <InputField
                             label="Marca" name="marca" value={form.data.marca}
                             onChange={e => form.setData('marca', e.target.value)}
+                            list="sug-marca"
                             error={form.errors.marca} placeholder="Ej. Samsung, HP"
                         />
                         <InputField
                             label="Modelo" name="modelo" value={form.data.modelo}
                             onChange={e => form.setData('modelo', e.target.value)}
+                            list="sug-modelo"
                             error={form.errors.modelo} placeholder="Ej. Galaxy S21"
                         />
                         <InputField
@@ -362,6 +419,7 @@ export default function RecepcionesIndex({ recepciones, empresas, clientes, loca
                             <InputField
                                 label="Accesorios entregados" name="accesorios" value={form.data.accesorios}
                                 onChange={e => form.setData('accesorios', e.target.value)}
+                                list="sug-accesorios"
                                 error={form.errors.accesorios} placeholder="Ej. Cargador, funda, caja"
                             />
                         </div>
@@ -416,6 +474,12 @@ export default function RecepcionesIndex({ recepciones, empresas, clientes, loca
                             />
                         )}
                     </div>
+
+                    {(Object.keys(sugerencias) as (keyof typeof sugerencias)[]).map(k => (
+                        <datalist key={k} id={`sug-${k}`}>
+                            {sugerencias[k].map(v => <option key={v} value={v} />)}
+                        </datalist>
+                    ))}
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
                         <Button variant="cancel" size="md" onClick={() => setModal(false)}>Cancelar</Button>

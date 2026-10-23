@@ -11,11 +11,13 @@ interface Props {
     required?: boolean;
     disabled?: boolean;
     styleContainer?: React.CSSProperties;
+    /** id de un <datalist> para sugerencias de autocompletado */
+    list?: string;
 }
 
 export default function InputField({
     label, name, value, onChange,
-    type = 'text', placeholder, error, required, disabled, styleContainer
+    type = 'text', placeholder, error, required, disabled, styleContainer, list
 }: Props) {
     return (
         <div style={{ marginBottom: label ? 18 : 0, ...styleContainer }}>
@@ -35,6 +37,8 @@ export default function InputField({
                 onChange={onChange}
                 placeholder={placeholder}
                 disabled={disabled}
+                list={list}
+                autoComplete={list ? 'off' : undefined}
                 onWheel={(e) => e.currentTarget.blur()}
                 style={{
                     width: '100%', padding: '11px 14px',
